@@ -30,6 +30,7 @@ import sys
 import argparse
 import subprocess
 import yaml
+import shutil
 from pathlib import Path
 from typing import Optional, Dict
 
@@ -54,6 +55,30 @@ load_dotenv()
 openai_client = None
 if os.getenv("OPENAI_API_KEY"):
     openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+def find_command(command_name: str) -> str:
+    """Find the full path to a command, checking common locations."""
+    # First try shutil.which (checks PATH)
+    cmd_path = shutil.which(command_name)
+    if cmd_path:
+        return cmd_path
+
+    # Check common installation locations
+    common_paths = [
+        Path.home() / "Library" / "Python" / "3.13" / "bin" / command_name,
+        Path.home() / "Library" / "Python" / "3.12" / "bin" / command_name,
+        Path.home() / "Library" / "Python" / "3.11" / "bin" / command_name,
+        Path.home() / ".local" / "bin" / command_name,
+        Path("/usr/local/bin") / command_name,
+    ]
+
+    for path in common_paths:
+        if path.exists():
+            return str(path)
+
+    # If not found, return command name and hope it's in PATH
+    return command_name
 
 
 def fetch_chapter_names(chapter: int) -> tuple[Optional[str], Optional[str]]:
@@ -213,8 +238,9 @@ def generate_image(chapter: Optional[int], verse: int, theme: str) -> bool:
     print(f"✓ Theme: {theme}")
 
     # Run verse-images command with --regenerate flag
+    verse_images_cmd = find_command("verse-images")
     cmd = [
-        "verse-images",
+        verse_images_cmd,
         "--theme-name", theme,
         "--regenerate", filename
     ]
@@ -262,8 +288,9 @@ def generate_audio(chapter: Optional[int], verse: int) -> bool:
     print(f"✓ Will generate: {base_name}_full.mp3 and {base_name}_slow.mp3")
 
     # Run verse-audio command with --regenerate flag
+    verse_audio_cmd = find_command("verse-audio")
     cmd = [
-        "verse-audio",
+        verse_audio_cmd,
         "--regenerate", filenames
     ]
 
