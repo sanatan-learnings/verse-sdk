@@ -10,7 +10,7 @@ verse-audio [OPTIONS]
 
 ## Description
 
-The `verse-audio` command generates Sanskrit pronunciation audio files using ElevenLabs' text-to-speech API. It reads Sanskrit text from the `devanagari:` field in verse markdown files and creates two versions:
+The `verse-audio` command generates pronunciation audio files using ElevenLabs' text-to-speech API. It reads text from the `devanagari:` field in verse markdown files and creates two versions:
 - Full speed (normal)
 - Slow speed (0.75x for learning pronunciation)
 
@@ -18,7 +18,7 @@ The `verse-audio` command generates Sanskrit pronunciation audio files using Ele
 
 - `--verses-dir PATH` - Path to verses directory (default: `_verses/`)
 - `--output-dir PATH` - Path to output directory (default: `audio/`)
-- `--voice-id ID` - ElevenLabs voice ID (default: configured for Sanskrit)
+- `--voice-id ID` - ElevenLabs voice ID (default: pre-configured voice)
 - `--regenerate FILE[,FILE...]` - Regenerate specific audio files
 - `--force` - Regenerate all audio files (prompts for confirmation)
 - `--start-from FILE` - Start generation from specific file
@@ -75,7 +75,7 @@ Naming for texts without chapters (e.g., Hanuman Chalisa):
 
 ## Voice Configuration
 
-The SDK uses a pre-configured voice ID optimized for Sanskrit pronunciation. To use a different voice:
+The SDK uses a pre-configured voice ID. To use a different voice:
 
 ```bash
 verse-audio --voice-id YOUR_VOICE_ID
@@ -121,7 +121,7 @@ git commit -m "Add audio pronunciations"
 ## Cost
 
 ElevenLabs pricing is character-based:
-- Sanskrit verses average ~150-300 characters
+- Verses average ~150-300 characters
 - Each verse generates 2 files (full + slow)
 - Cost: ~$0.001-0.002 per verse
 
@@ -172,7 +172,7 @@ Ensure verse file has the `devanagari:` field in frontmatter:
 ```yaml
 ---
 devanagari: |
-  Your Sanskrit text here
+  Your verse text in Devanagari script here
 ---
 ```
 

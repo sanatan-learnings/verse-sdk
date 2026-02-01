@@ -8,7 +8,7 @@ Python SDK for generating multimedia content for spiritual texts (Bhagavad Gita,
 - **🤖 AI-Powered**: Automatic content generation using GPT-4, DALL-E 3, and ElevenLabs
 - **🔍 Semantic Search**: Vector embeddings for intelligent verse search
 - **🎨 Theme System**: Configurable visual styles for images
-- **🎵 Audio**: Sanskrit pronunciation in full and slow speeds
+- **🎵 Audio**: Verse pronunciation in full and slow speeds
 - **☁️ Cloudflare**: Easy deployment utilities for API proxies
 
 ## Quick Start
@@ -26,7 +26,7 @@ verse-generate --chapter 2 --verse 47 --all
 ```
 
 That's it! The `--all` flag generates **all content automatically**:
-- ✅ Fetches Sanskrit text from GPT-4
+- ✅ Fetches verse text from GPT-4
 - ✅ Fetches chapter names from GPT-4
 - ✅ Generates translations and commentary
 - ✅ Creates scene description for artwork
