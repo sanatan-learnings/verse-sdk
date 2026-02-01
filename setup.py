@@ -37,6 +37,7 @@ setup(
     ],
     entry_points={
         'console_scripts': [
+            'verse-generate=verse_content_sdk.cli.generate:main',
             'verse-embeddings=verse_content_sdk.embeddings.generate_embeddings:main',
             'verse-audio=verse_content_sdk.audio.generate_audio:main',
             'verse-images=verse_content_sdk.images.generate_theme_images:main',
