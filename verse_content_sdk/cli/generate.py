@@ -335,9 +335,23 @@ def generate_image_prompt(chapter: Optional[int], verse: int, sanskrit: str, cha
     else:
         search_pattern = f"### Verse {verse}"
 
+    found_placeholder = False
     if search_pattern in existing_content:
-        print(f"✓ Scene description already exists for {search_pattern}")
-        return True
+        # Check if it's just a placeholder
+        header_pos = existing_content.find(search_pattern)
+        if header_pos != -1:
+            # Get the content after the header until the next header or end
+            content_after = existing_content[header_pos:]
+            next_header = content_after.find('\n---', 1)  # Find next separator
+            section = content_after[:next_header] if next_header != -1 else content_after
+
+            # Check if it's a placeholder
+            if '[Add scene description' in section or section.count('\n') < 5:
+                print(f"⚠ Found placeholder for {search_pattern}, will regenerate...")
+                found_placeholder = True
+            else:
+                print(f"✓ Scene description already exists for {search_pattern}")
+                return True
 
     print(f"Generating scene description using GPT-4...")
     print(f"Sanskrit verse: {sanskrit[:50]}...")
@@ -384,13 +398,34 @@ Generate a vivid 3-5 sentence scene description suitable for DALL-E 3 image gene
         print(f"\n✓ Generated scene description:")
         print(f"  {scene_description[:100]}...\n")
 
-        # Append to prompts file
-        new_entry = f"\n---\n\n{search_pattern}\n\n**Scene Description**:\n{scene_description}\n"
+        # Replace placeholder or append new entry
+        if found_placeholder:
+            # Replace the placeholder section
+            header_pos = existing_content.find(search_pattern)
+            content_after = existing_content[header_pos:]
+            next_separator = content_after.find('\n---', 1)
 
-        with open(prompts_file, 'a', encoding='utf-8') as f:
-            f.write(new_entry)
+            if next_separator != -1:
+                # Replace up to the next separator
+                end_pos = header_pos + next_separator
+                new_content = (existing_content[:header_pos] +
+                             f"{search_pattern}\n\n**Scene Description**:\n{scene_description}\n" +
+                             existing_content[end_pos:])
+            else:
+                # Replace to end of file
+                new_content = (existing_content[:header_pos] +
+                             f"{search_pattern}\n\n**Scene Description**:\n{scene_description}\n")
 
-        print(f"✓ Added scene description to {prompts_file}")
+            with open(prompts_file, 'w', encoding='utf-8') as f:
+                f.write(new_content)
+            print(f"✓ Replaced placeholder in {prompts_file}")
+        else:
+            # Append new entry
+            new_entry = f"\n---\n\n{search_pattern}\n\n**Scene Description**:\n{scene_description}\n"
+            with open(prompts_file, 'a', encoding='utf-8') as f:
+                f.write(new_entry)
+            print(f"✓ Added scene description to {prompts_file}")
+
         return True
 
     except Exception as e:

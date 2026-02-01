@@ -1,118 +1,248 @@
-# Verse Content SDK
+# verse-content-sdk
 
-A Python SDK for generating rich multimedia content for verse-based texts. Provides utilities for:
+Python SDK for generating multimedia content for spiritual texts (Bhagavad Gita, Hanuman Chalisa, etc.)
 
-- **Embeddings**: Generate vector embeddings for semantic search (local and OpenAI)
-- **Audio**: Text-to-speech generation using ElevenLabs
-- **Images**: AI-generated images using DALL-E
-- **Deployment**: Cloudflare Workers deployment utilities
+## Features
+
+- **🎯 All-in-One Generation**: Single `--all` command generates text, scene description, image, and audio together
+- **🤖 AI-Powered**: Automatic content generation using GPT-4, DALL-E 3, and ElevenLabs
+- **🔍 Semantic Search**: Vector embeddings for intelligent verse search
+- **🎨 Theme System**: Configurable visual styles for images
+- **🎵 Audio**: Sanskrit pronunciation in full and slow speeds
+- **☁️ Cloudflare**: Easy deployment utilities for API proxies
+
+## Quick Start
+
+```bash
+# Install
+pip install verse-content-sdk
+
+# Set up API keys
+export OPENAI_API_KEY=sk-...
+export ELEVENLABS_API_KEY=...
+
+# Generate EVERYTHING with one command
+verse-generate --chapter 2 --verse 47 --all
+```
+
+That's it! The `--all` flag generates **all content automatically**:
+- ✅ Fetches Sanskrit text from GPT-4
+- ✅ Fetches chapter names from GPT-4
+- ✅ Generates translations and commentary
+- ✅ Creates scene description for artwork
+- ✅ Generates DALL-E 3 image
+- ✅ Produces audio pronunciation files (full + slow speeds)
 
 ## Installation
 
+### From PyPI (Recommended)
+
+```bash
+pip install verse-content-sdk
+```
+
 ### From GitHub
+
 ```bash
 pip install git+https://github.com/sanatan-learnings/verse-content-sdk.git
 ```
 
 ### For Development
+
 ```bash
 git clone https://github.com/sanatan-learnings/verse-content-sdk.git
 cd verse-content-sdk
 pip install -e .
 ```
 
-## Usage
+## Commands
 
-### Command-Line Tools (Recommended)
+### verse-generate
 
-After installation, the SDK provides command-line tools:
+Unified command for complete verse generation. The `--all` flag generates **everything in one command**:
+- ✅ Text content (translations, commentary, meanings)
+- ✅ Scene description (for image generation)
+- ✅ Image (DALL-E 3 artwork)
+- ✅ Audio (full + slow speed pronunciations)
 
-#### Generate All Content for a Verse (Unified Command)
 ```bash
-# Generate everything (text, image, audio) for Chapter 2, Verse 47
-verse-generate --chapter 2 --verse 47 --all
+# Generate everything in one command (recommended)
+verse-generate --chapter 3 --verse 5 --all
 
-# Generate only image and audio
-verse-generate --chapter 2 --verse 47 --image --audio
+# Or generate specific components
+verse-generate --chapter 3 --verse 5 --text      # Text only
+verse-generate --chapter 3 --verse 5 --prompt    # Scene description only
+verse-generate --chapter 3 --verse 5 --image     # Image only
+verse-generate --chapter 3 --verse 5 --audio     # Audio only
 
-# Generate only image with specific theme
-verse-generate --chapter 2 --verse 47 --image --theme modern-minimalist
-
-# For texts without chapters (like Hanuman Chalisa)
+# Without chapters (e.g., Hanuman Chalisa)
 verse-generate --verse 15 --all
 ```
 
-#### Generate Embeddings
+**[Full documentation](docs/commands/verse-generate.md)**
+
+### verse-images
+
+Generate images using DALL-E 3.
+
 ```bash
-# Using OpenAI (default)
-verse-embeddings --verses-dir _verses --output data/embeddings.json
+# Generate all images
+verse-images --theme-name modern-minimalist
 
-# Using local models (free)
-verse-embeddings --verses-dir _verses --output data/embeddings.json --provider huggingface
-
-# With custom paths
-verse-embeddings --verses-dir path/to/verses --output path/to/output.json
+# Regenerate specific image
+verse-images --theme-name modern-minimalist --regenerate chapter-01-verse-01.png
 ```
 
-#### Generate Audio
+**[Full documentation](docs/commands/verse-images.md)**
+
+### verse-audio
+
+Generate audio pronunciations using ElevenLabs.
+
 ```bash
-# Generate all audio files
+# Generate all audio
 verse-audio
 
 # Regenerate specific files
 verse-audio --regenerate chapter_01_verse_01_full.mp3,chapter_01_verse_01_slow.mp3
-
-# Generate from a specific verse
-verse-audio --start-from chapter_02_verse_01_full.mp3
 ```
 
-#### Generate Images
+**[Full documentation](docs/commands/verse-audio.md)**
+
+### verse-embeddings
+
+Generate vector embeddings for semantic search.
+
 ```bash
-# Generate all images for a theme
-verse-images --theme-name modern-minimalist
+# Using OpenAI (recommended)
+verse-embeddings --verses-dir _verses --output data/embeddings.json
 
-# Regenerate specific images
-verse-images --theme-name modern-minimalist --regenerate chapter-01-verse-01.png
-
-# Force regenerate all images
-verse-images --theme-name modern-minimalist --force
+# Using local models (free)
+verse-embeddings --verses-dir _verses --output data/embeddings.json --provider huggingface
 ```
 
-#### Deploy Cloudflare Worker
+**[Full documentation](docs/commands/verse-embeddings.md)**
+
+### verse-deploy
+
+Deploy Cloudflare Worker for API proxy.
+
 ```bash
-# Run from your project root (where wrangler.toml is located)
-cd /path/to/your/project
 verse-deploy
-```
-
-### Python API (For Custom Scripts)
-
-You can also import and use the SDK in your Python code:
-
-```python
-from verse_content_sdk.embeddings import generate_embeddings
-
-generate_embeddings(
-    verses_dir="path/to/_verses",
-    output_file="path/to/embeddings.json",
-    provider="openai"  # or "huggingface"
-)
 ```
 
 ## Configuration
 
-Create a `.env` file with your API keys:
+Create a `.env` file:
+
+```bash
+OPENAI_API_KEY=sk-your_openai_key
+ELEVENLABS_API_KEY=your_elevenlabs_key
 ```
-OPENAI_API_KEY=your-openai-key
-ELEVENLABS_API_KEY=your-elevenlabs-key
+
+## Project Structure
+
+Your project should have:
+
 ```
+your-project/
+├── .env                        # API keys
+├── _verses/                    # Verse markdown files
+├── docs/
+│   ├── image-prompts.md        # Scene descriptions
+│   └── themes/
+│       └── modern-minimalist.yml  # Theme config
+├── images/                     # Generated images
+│   └── modern-minimalist/
+├── audio/                      # Generated audio
+└── data/
+    └── embeddings.json         # Search embeddings
+```
+
+## API Costs
+
+| Component | Cost per Verse | Provider |
+|-----------|---------------|----------|
+| Text generation | ~$0.02 | OpenAI GPT-4 |
+| Image | $0.04 (standard) / $0.08 (HD) | DALL-E 3 |
+| Audio (2 files) | ~$0.001 | ElevenLabs |
+| **Total per verse** | **~$0.06** | |
+
+**For 700 verses** (complete Bhagavad Gita): **~$42**
+
+## Examples
+
+### Generate Everything with One Command
+
+The `--all` flag generates complete multimedia content:
+
+```bash
+# Generate text + scene description + image + audio in one command
+verse-generate --chapter 5 --verse 10 --all
+
+# Review all generated files
+ls _verses/chapter_05_verse_10.md                    # Text content
+ls docs/image-prompts.md                             # Scene description (appended)
+ls images/modern-minimalist/chapter-05-verse-10.png  # Image
+ls audio/chapter_05_verse_10_*.mp3                   # Audio files (full + slow)
+
+# Generate embeddings for search
+verse-embeddings --verses-dir _verses --output data/embeddings.json
+```
+
+### Regenerate Specific Components
+
+```bash
+# Regenerate just the image
+verse-generate --chapter 2 --verse 47 --image
+
+# Regenerate just the audio
+verse-generate --chapter 2 --verse 47 --audio
+```
+
+### Multiple Verses
+
+```bash
+# Generate verses 1-10 of Chapter 1
+for i in {1..10}; do
+  verse-generate --chapter 1 --verse $i --all
+  sleep 5  # Rate limiting
+done
+```
+
+## Documentation
+
+- **[Main Documentation](docs/README.md)** - Overview and quick start
+- **[verse-generate](docs/commands/verse-generate.md)** - Complete verse generation
+- **[verse-images](docs/commands/verse-images.md)** - Image generation
+- **[verse-audio](docs/commands/verse-audio.md)** - Audio generation
+- **[verse-embeddings](docs/commands/verse-embeddings.md)** - Embeddings generation
+- **[Troubleshooting](docs/troubleshooting.md)** - Common issues
+
+## Example Projects
+
+- [Bhagavad Gita](https://github.com/sanatan-learnings/bhagavad-gita) - Complete implementation with RAG system
+- [Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Simple verse-based text
 
 ## Requirements
 
 - Python 3.8+
-- OpenAI API key (for embeddings and image generation)
-- ElevenLabs API key (for audio generation)
+- OpenAI API key (for text/images/embeddings)
+- ElevenLabs API key (for audio)
 
 ## License
 
-MIT License - See LICENSE file for details
+MIT License - See [LICENSE](LICENSE) file for details
+
+## Contributing
+
+Contributions welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## Support
+
+- [GitHub Issues](https://github.com/sanatan-learnings/verse-content-sdk/issues)
+- [Documentation](docs/README.md)
+- [Troubleshooting Guide](docs/troubleshooting.md)
