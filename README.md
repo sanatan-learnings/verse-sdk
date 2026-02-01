@@ -27,6 +27,21 @@ pip install -e .
 
 After installation, the SDK provides command-line tools:
 
+#### Generate All Content for a Verse (Unified Command)
+```bash
+# Generate everything (text, image, audio) for Chapter 2, Verse 47
+verse-generate --chapter 2 --verse 47 --all
+
+# Generate only image and audio
+verse-generate --chapter 2 --verse 47 --image --audio
+
+# Generate only image with specific theme
+verse-generate --chapter 2 --verse 47 --image --theme modern-minimalist
+
+# For texts without chapters (like Hanuman Chalisa)
+verse-generate --verse 15 --all
+```
+
 #### Generate Embeddings
 ```bash
 # Using OpenAI (default)
@@ -41,12 +56,26 @@ verse-embeddings --verses-dir path/to/verses --output path/to/output.json
 
 #### Generate Audio
 ```bash
-verse-audio --help  # Coming soon
+# Generate all audio files
+verse-audio
+
+# Regenerate specific files
+verse-audio --regenerate chapter_01_verse_01_full.mp3,chapter_01_verse_01_slow.mp3
+
+# Generate from a specific verse
+verse-audio --start-from chapter_02_verse_01_full.mp3
 ```
 
 #### Generate Images
 ```bash
-verse-images --help  # Coming soon
+# Generate all images for a theme
+verse-images --theme-name modern-minimalist
+
+# Regenerate specific images
+verse-images --theme-name modern-minimalist --regenerate chapter-01-verse-01.png
+
+# Force regenerate all images
+verse-images --theme-name modern-minimalist --force
 ```
 
 #### Deploy Cloudflare Worker
