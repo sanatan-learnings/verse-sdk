@@ -137,17 +137,20 @@ verse-audio --regenerate chapter_01_verse_01_full.mp3,chapter_01_verse_01_slow.m
 
 ### verse-embeddings
 
-Generate vector embeddings for semantic search.
+Generate vector embeddings for semantic search. Supports single or multi-collection processing.
 
 ```bash
-# Using OpenAI (recommended)
+# Single collection (default)
 verse-embeddings --verses-dir _verses --output data/embeddings.json
 
+# Multi-collection mode (process multiple collections at once)
+verse-embeddings --multi-collection --collections-file ./collections.yml
+
 # Using local models (free)
-verse-embeddings --verses-dir _verses --output data/embeddings.json --provider huggingface
+verse-embeddings --provider huggingface
 ```
 
-**[Full documentation](docs/commands/verse-embeddings.md)**
+**[Full documentation](docs/commands/verse-embeddings.md)** | **[Multi-collection guide](docs/multi-collection.md)**
 
 ### verse-deploy
 
