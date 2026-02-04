@@ -1,15 +1,15 @@
 # verse-content-sdk
 
-Python SDK for generating multimedia content for spiritual texts (Bhagavad Gita, Hanuman Chalisa, etc.)
+Python SDK for generating multimedia content for spiritual text collections (Hanuman Chalisa, Sundar Kaand, etc.)
 
 ## Features
 
-- **🎯 All-in-One Generation**: Single `--all` command generates text, scene description, image, and audio together
-- **🤖 AI-Powered**: Automatic content generation using GPT-4, DALL-E 3, and ElevenLabs
+- **📚 Collection-Aware**: Organized support for multiple verse collections
+- **🎯 Simple Generation**: Generate images and audio for specific verses
+- **🤖 AI-Powered**: DALL-E 3 for images, ElevenLabs for audio
 - **🔍 Semantic Search**: Vector embeddings for intelligent verse search
 - **🎨 Theme System**: Configurable visual styles for images
 - **🎵 Audio**: Verse pronunciation in full and slow speeds
-- **☁️ Cloudflare**: Easy deployment utilities for API proxies
 
 ## Quick Start
 
@@ -21,34 +21,21 @@ pip install verse-content-sdk
 export OPENAI_API_KEY=sk-...
 export ELEVENLABS_API_KEY=...
 
-# Generate EVERYTHING with one command
+# List available collections
+verse-generate --list-collections
 
-# For chapter-based texts (Bhagavad Gita)
-verse-generate --chapter 2 --verse 47 --all
+# Generate image and audio for a verse
+verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist
 
-# For non-chapter texts (Hanuman Chalisa)
-verse-generate --verse 15 --all
+# Or generate specific components
+verse-generate --collection sundar-kaand --verse 3 --image --theme modern-minimalist
+verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 ```
 
-That's it! The `--all` flag generates **all content automatically**:
-
-**Text Content (Verse File)**:
-- ✅ Sanskrit/Devanagari text (auto-fetched from GPT-4 if not provided)
-- ✅ Chapter names in English & Hindi (auto-fetched for chapter-based texts)
-- ✅ Transliteration (IAST format with diacritics)
-- ✅ Word-by-word meanings (Sanskrit word, romanization, English & Hindi meanings)
-- ✅ Literal translation (English & Hindi)
-- ✅ Interpretive meaning (2-3 paragraphs explaining spiritual significance, English & Hindi)
-- ✅ Story/context (2-3 paragraphs explaining narrative context, English & Hindi)
-- ✅ Practical application (specific daily life examples, English & Hindi)
-
-**Visual Content**:
-- ✅ Scene description for artwork (saved to `prompts/image_prompts.md`)
-- ✅ DALL-E 3 generated image (saved to `images/{theme}/`)
-
-**Audio Content**:
-- ✅ Full-speed pronunciation (saved to `audio/{verse}_full.mp3`)
-- ✅ Slow-speed pronunciation (saved to `audio/{verse}_slow.mp3`)
+The `--all` flag generates:
+- ✅ DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
+- ✅ Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
+- ✅ Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
 
 ## Installation
 
@@ -76,61 +63,60 @@ pip install -e .
 
 ### verse-generate
 
-Unified command for complete verse generation. The `--all` flag generates **everything in one command** with full automation - no manual formatting needed!
-
-**What gets generated:**
-- ✅ Complete verse file with parsed YAML frontmatter
-- ✅ All text fields (transliteration, word meanings, translations, interpretations)
-- ✅ Scene description for artwork
-- ✅ DALL-E 3 generated image
-- ✅ Full-speed and slow-speed audio pronunciations
-
-**Key Features:**
-- 🤖 Sanskrit text auto-fetched from GPT-4 if not provided
-- 🤖 Chapter names auto-fetched for chapter-based texts
-- ✅ All content properly parsed and merged into verse file frontmatter
-- ✅ Ready to use immediately - no manual editing required
+Orchestrates image and audio generation for a specific verse.
 
 ```bash
-# Generate everything in one command (recommended)
-verse-generate --chapter 3 --verse 5 --all
+# Generate both image and audio
+verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist
 
-# Or generate specific components
-verse-generate --chapter 3 --verse 5 --text      # Text only
-verse-generate --chapter 3 --verse 5 --prompt    # Scene description only
-verse-generate --chapter 3 --verse 5 --image     # Image only
-verse-generate --chapter 3 --verse 5 --audio     # Audio only
+# Generate only image
+verse-generate --collection sundar-kaand --verse 3 --image --theme modern-minimalist
 
-# Without chapters (e.g., Hanuman Chalisa)
-verse-generate --verse 15 --all
+# Generate only audio
+verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
+
+# List available collections
+verse-generate --list-collections
 ```
 
 **[Full documentation](docs/commands/verse-generate.md)**
 
 ### verse-images
 
-Generate images using DALL-E 3.
+Generate images using DALL-E 3 for a collection.
 
 ```bash
-# Generate all images
-verse-images --theme-name modern-minimalist
+# Generate all images for a collection and theme
+verse-images --collection hanuman-chalisa --theme modern-minimalist
+
+# Generate specific verse
+verse-images --collection sundar-kaand --theme modern-minimalist --verse chaupai_03
 
 # Regenerate specific image
-verse-images --theme-name modern-minimalist --regenerate chapter-01-verse-01.png
+verse-images --collection hanuman-chalisa --theme kids-friendly --regenerate verse-15.png
+
+# List available collections
+verse-images --list-collections
 ```
 
 **[Full documentation](docs/commands/verse-images.md)**
 
 ### verse-audio
 
-Generate audio pronunciations using ElevenLabs.
+Generate audio pronunciations using ElevenLabs for a collection.
 
 ```bash
-# Generate all audio
-verse-audio
+# Generate all audio for a collection
+verse-audio --collection hanuman-chalisa
+
+# Generate specific verse
+verse-audio --collection sundar-kaand --verse chaupai_03
 
 # Regenerate specific files
-verse-audio --regenerate chapter_01_verse_01_full.mp3,chapter_01_verse_01_slow.mp3
+verse-audio --collection hanuman-chalisa --regenerate verse_01_full.mp3,verse_01_slow.mp3
+
+# List available collections
+verse-audio --list-collections
 ```
 
 **[Full documentation](docs/commands/verse-audio.md)**
@@ -169,23 +155,75 @@ OPENAI_API_KEY=sk-your_openai_key
 ELEVENLABS_API_KEY=your_elevenlabs_key
 ```
 
-## Project Structure
+## Directory Structure Conventions
 
-Your project should have:
+The SDK follows a **convention-over-configuration** approach. Your project must follow this structure:
 
 ```
 your-project/
-├── .env                        # API keys
-├── _verses/                    # Verse markdown files
+├── .env                                  # API keys
+├── _data/
+│   └── collections.yml                   # Collection registry
+├── _verses/
+│   ├── <collection-key>/                 # Verse files by collection
+│   │   ├── verse_01.md
+│   │   ├── verse_02.md
+│   │   └── ...
+│   ├── sundar-kaand/
+│   │   ├── chaupai_01.md
+│   │   └── ...
+│   └── sankat-mochan-hanumanashtak/
+│       ├── verse_01.md
+│       └── ...
 ├── docs/
-│   ├── image-prompts.md        # Scene descriptions
+│   ├── image-prompts/                    # Scene descriptions by collection
+│   │   ├── <collection-key>.md
+│   │   ├── sundar-kaand.md
+│   │   └── sankat-mochan-hanumanashtak.md
 │   └── themes/
-│       └── modern-minimalist.yml  # Theme config
-├── images/                     # Generated images
-│   └── modern-minimalist/
-├── audio/                      # Generated audio
+│       └── <collection-key>/             # Theme configs by collection
+│           ├── modern-minimalist.yml
+│           ├── kids-friendly.yml
+│           └── ...
+├── images/
+│   └── <collection-key>/                 # Generated images by collection and theme
+│       ├── <theme-name>/
+│       │   ├── verse-01.png
+│       │   └── ...
+│       └── kids-friendly/
+│           └── ...
+├── audio/
+│   └── <collection-key>/                 # Generated audio by collection
+│       ├── verse_01_full.mp3
+│       ├── verse_01_slow.mp3
+│       └── ...
 └── data/
-    └── embeddings.json         # Search embeddings
+    └── embeddings.json                   # Search embeddings (all collections)
+```
+
+### Key Conventions
+
+1. **Collection Keys**: Use kebab-case (e.g., `hanuman-chalisa`, `sundar-kaand`)
+2. **Verse Files**: Named `verse_NN.md` or custom names like `chaupai_NN.md`
+3. **Image Prompts**: One file per collection in `docs/image-prompts/<collection-key>.md`
+4. **Theme Files**: One YAML file per theme in `docs/themes/<collection-key>/<theme-name>.yml`
+5. **Collections Registry**: Define all collections in `_data/collections.yml` with `enabled: true`
+
+### Example collections.yml
+
+```yaml
+hanuman-chalisa:
+  enabled: true
+  name:
+    en: "Hanuman Chalisa"
+    hi: "हनुमान चालीसा"
+  # ... other metadata
+
+sundar-kaand:
+  enabled: true
+  name:
+    en: "Sundar Kaand"
+    hi: "सुंदर काण्ड"
 ```
 
 ## API Costs
@@ -201,83 +239,59 @@ your-project/
 
 ## Examples
 
-### Generate Everything with One Command
+### Generate Media for a Verse
 
-The `--all` flag generates complete multimedia content:
-
-**For chapter-based texts (Bhagavad Gita):**
+Generate image and audio for a specific verse:
 
 ```bash
-# Generate text + scene description + image + audio in one command
-verse-generate --chapter 5 --verse 10 --all
+# Generate both image and audio
+verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist
 
-# Review all generated files
-ls _verses/chapter_05_verse_10.md                    # Text content
-ls docs/image-prompts.md                             # Scene description (appended)
-ls images/modern-minimalist/chapter-05-verse-10.png  # Image
-ls audio/chapter_05_verse_10_*.mp3                   # Audio files (full + slow)
+# Review generated files
+ls images/hanuman-chalisa/modern-minimalist/verse-15.png
+ls audio/hanuman-chalisa/verse_15_full.mp3
+ls audio/hanuman-chalisa/verse_15_slow.mp3
 ```
 
-**For non-chapter texts (Hanuman Chalisa):**
+### Generate Media for an Entire Collection
+
+Generate all images for a collection:
 
 ```bash
-# Generate complete verse content
-verse-generate --verse 7 --all
+# Generate all images for a theme
+verse-images --collection sundar-kaand --theme modern-minimalist
 
-# Review all generated files
-ls _verses/verse_07.md                    # Text content
-ls docs/image-prompts.md                  # Scene description (appended)
-ls images/modern-minimalist/verse-07.png  # Image
-ls audio/verse_07_*.mp3                   # Audio files (full + slow)
+# Review generated files
+ls images/sundar-kaand/modern-minimalist/
 ```
 
-**Generate embeddings for search:**
+Generate all audio for a collection:
 
 ```bash
-verse-embeddings --verses-dir _verses --output data/embeddings.json
+# Generate all audio
+verse-audio --collection sankat-mochan-hanumanashtak
+
+# Review generated files
+ls audio/sankat-mochan-hanumanashtak/
 ```
 
-### Regenerate Specific Components
-
-**Bhagavad Gita:**
+### Generate Embeddings for Search
 
 ```bash
-# Regenerate just the image
-verse-generate --chapter 2 --verse 47 --image
+# Generate embeddings for all collections
+verse-embeddings --multi-collection --collections-file _data/collections.yml
 
-# Regenerate just the audio
-verse-generate --chapter 2 --verse 47 --audio
+# Review generated file
+cat data/embeddings.json
 ```
 
-**Hanuman Chalisa:**
+### Batch Process Multiple Verses
 
-```bash
-# Regenerate just the text
-verse-generate --verse 12 --text
-
-# Regenerate just the image
-verse-generate --verse 12 --image
-
-# Regenerate just the audio
-verse-generate --verse 12 --audio
-```
-
-### Multiple Verses
-
-**Bhagavad Gita (verses 1-10 of Chapter 1):**
+Generate media for verses 1-10:
 
 ```bash
 for i in {1..10}; do
-  verse-generate --chapter 1 --verse $i --all
-  sleep 5  # Rate limiting
-done
-```
-
-**Hanuman Chalisa (verses 1-40, complete text):**
-
-```bash
-for i in {1..40}; do
-  verse-generate --verse $i --all
+  verse-generate --collection hanuman-chalisa --verse $i --all --theme modern-minimalist
   sleep 5  # Rate limiting
 done
 ```
@@ -299,8 +313,7 @@ done
 
 ## Example Projects
 
-- [Bhagavad Gita](https://github.com/sanatan-learnings/bhagavad-gita) - Complete implementation with RAG system
-- [Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Simple verse-based text
+- [Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Multi-collection project with Hanuman Chalisa, Sundar Kaand, and Sankat Mochan Hanumanashtak
 
 ## Requirements
 
