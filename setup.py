@@ -34,6 +34,7 @@ setup(
         "PyYAML>=6.0.0",
         "sentence-transformers>=2.2.0",
         "torch>=2.0.0",
+        "beautifulsoup4>=4.12.0",
     ],
     entry_points={
         'console_scripts': [
@@ -42,6 +43,7 @@ setup(
             'verse-audio=verse_content_sdk.audio.generate_audio:main',
             'verse-images=verse_content_sdk.images.generate_theme_images:main',
             'verse-deploy=verse_content_sdk.deployment.deploy:main',
+            'verse-fetch-text=verse_content_sdk.fetch.fetch_verse_text:main',
         ],
     },
 )
