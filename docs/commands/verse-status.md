@@ -15,8 +15,14 @@ verse-status --collection hanuman-chalisa
 # Check all enabled collections
 verse-status --all-collections
 
+# Validate text against normative source
+verse-status --collection sundar-kaand --validate-text
+
+# Validate specific verse
+verse-status --collection sundar-kaand --verse chaupai_01 --validate-text
+
 # Detailed report with verse-by-verse breakdown
-verse-status --collection sundar-kaand --detailed
+verse-status --collection sundar-kaand --detailed --validate-text
 
 # JSON output for scripting
 verse-status --collection hanuman-chalisa --format json
@@ -30,7 +36,9 @@ verse-status --embeddings-only
 | Option | Description |
 |--------|-------------|
 | `--collection KEY` | Collection key to check |
+| `--verse ID` | Specific verse ID to check (e.g., chaupai_01) |
 | `--all-collections` | Check all enabled collections |
+| `--validate-text` | Validate verse text against normative source |
 | `--detailed` | Show detailed verse-by-verse breakdown |
 | `--format {text,json}` | Output format (default: text) |
 | `--embeddings-only` | Only check embeddings status |
@@ -47,6 +55,7 @@ verse-status --embeddings-only
 - ✓ Full-speed audio file exists (`audio/{collection}/{verse}_full.mp3`)
 - ✓ Slow-speed audio file exists (`audio/{collection}/{verse}_slow.mp3`)
 - ✓ Image files exist (checks multiple themes)
+- ✓ **NEW**: Text validation against normative source (`data/verses/{collection}.yaml`)
 
 ### Collection Statistics
 - Total verse count
@@ -118,6 +127,73 @@ VERSE COLLECTION STATUS
    │  └─ Missing: audio_full, audio_slow, images
    ├─ verse_04              │ Text:✓ │ Audio:✓✓ │ Image:✓
    ...
+```
+
+### Text Validation
+
+```bash
+$ verse-status --collection sundar-kaand --validate-text
+
+============================================================
+VERSE COLLECTION STATUS
+============================================================
+
+📚 Collection: sundar-kaand
+   Verses: 5
+   Completion: 80.0% (4/5 verses)
+
+   Content Status:
+   ├─ Devanagari text:    5/5 verses
+   ├─ Translation:        4/5 verses
+   ├─ Audio (full):       4/5 verses
+   ├─ Audio (slow):       4/5 verses
+   └─ Images:             4/5 verses
+
+   Text Validation:
+   ├─ Exact match:        3/5 verses
+   ├─ Minor diff:         1/5 verses
+   ├─ Mismatch:           1/5 verses
+   └─ Missing:            0/5 verses
+
+   Validation Details:
+   ├─ chaupai_01          ✓ Exact match with normative text
+   ├─ chaupai_02          ⚠️ Minor differences (whitespace/punctuation)
+   │  ├─ Normative: "जामवंत के बचन सुहाए।।"
+   │  └─ Current:   "जामवंत के बचन सुहाए।"
+   ├─ chaupai_03          ✗ Text does not match normative source
+   │  └─ Fix: verse-generate --collection sundar-kaand --verse 3 --fetch-text
+   ├─ doha_01             ✓ Exact match with normative text
+   └─ shloka_01           ✓ Exact match with normative text
+```
+
+### Validate Specific Verse
+
+```bash
+$ verse-status --collection sundar-kaand --verse chaupai_01 --validate-text
+
+============================================================
+VERSE COLLECTION STATUS
+============================================================
+
+📚 Collection: sundar-kaand
+   Verses: 1
+   Completion: 100.0% (1/1 verses)
+
+   Content Status:
+   ├─ Devanagari text:    1/1 verses
+   ├─ Translation:        1/1 verses
+   ├─ Audio (full):       1/1 verses
+   ├─ Audio (slow):       1/1 verses
+   └─ Images:             1/1 verses
+
+   Text Validation:
+   ├─ Exact match:        1/1 verses
+   ├─ Minor diff:         0/1 verses
+   ├─ Mismatch:           0/1 verses
+   └─ Missing:            0/1 verses
+
+   Validation Details:
+   └─ chaupai_01          ✓ Exact match with normative text
 ```
 
 ### All Collections
@@ -253,8 +329,22 @@ verse-status --collection sundar-kaand --format json | \
   jq '.collections[0].verses[] | select(.audio.full == null) | .verse_id'
 ```
 
-### 5. CI/CD Integration
-Check content completeness in automated pipelines:
+### 5. Validate Text Accuracy
+
+Ensure verse text matches canonical source:
+```bash
+# Validate all verses in a collection
+verse-status --collection sundar-kaand --validate-text
+
+# Validate before publishing
+verse-status --all-collections --validate-text
+
+# Check specific verse after editing
+verse-status --collection hanuman-chalisa --verse verse_15 --validate-text
+```
+
+### 6. CI/CD Integration
+Check content completeness and text accuracy in automated pipelines:
 ```bash
 #!/bin/bash
 # Fail if collection is less than 90% complete
@@ -264,6 +354,15 @@ COMPLETION=$(verse-status --collection hanuman-chalisa --format json | \
 
 if (( $(echo "$COMPLETION < 90" | bc -l) )); then
   echo "Error: Collection is only ${COMPLETION}% complete"
+  exit 1
+fi
+
+# Fail if text validation finds mismatches
+MISMATCHES=$(verse-status --collection hanuman-chalisa --validate-text --format json | \
+  jq '[.collections[0].verses[] | select(.validation.status == "mismatch")] | length')
+
+if [ "$MISMATCHES" -gt 0 ]; then
+  echo "Error: Found $MISMATCHES verses with text mismatches"
   exit 1
 fi
 ```
