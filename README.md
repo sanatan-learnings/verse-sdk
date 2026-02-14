@@ -27,6 +27,9 @@ verse-generate --list-collections
 # Generate image and audio for a verse (simplest form)
 verse-generate --collection hanuman-chalisa --verse 15
 
+# Complete workflow: fetch text, generate media, update embeddings
+verse-generate --collection sundar-kaand --verse 5 --fetch-text --update-embeddings
+
 # Or generate specific components only
 verse-generate --collection sundar-kaand --verse 3 --image
 verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
@@ -36,6 +39,10 @@ By default, the command generates:
 - ✅ DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
 - ✅ Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
 - ✅ Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
+
+Optional flags for complete workflow:
+- 🔍 `--fetch-text` - Fetch traditional Devanagari text from authoritative sources
+- 🔗 `--update-embeddings` - Update vector embeddings for semantic search
 
 ## Installation
 
