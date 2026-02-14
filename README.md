@@ -186,7 +186,7 @@ done
 
 ## Example Project
 
-[Hanuman Chalisa](https://github.com/sanatan-learnings/hanuman-chalisa) - Multi-collection project with Hanuman Chalisa, Sundar Kaand, and Sankat Mochan Hanumanashtak
+[Hanuman GPT](https://github.com/sanatan-learnings/hanuman-gpt) - Multi-collection project with Hanuman Chalisa, Sundar Kaand, and Sankat Mochan Hanumanashtak
 
 ## Requirements
 
