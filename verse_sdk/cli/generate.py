@@ -726,9 +726,9 @@ Environment Variables:
     )
     parser.add_argument(
         "--verse",
-        type=int,
-        help="Verse number (required unless --list-collections)",
-        metavar="N"
+        type=str,
+        help="Verse number or range (e.g., 5, 1-10, 5-20)",
+        metavar="N or M-N"
     )
 
     # Content types
@@ -807,22 +807,35 @@ Environment Variables:
     if not validate_collection(args.collection):
         sys.exit(1)
 
-    # Determine verse ID (with smart inference)
-    if args.verse_id:
-        # User explicitly specified verse ID
-        verse_id = args.verse_id
-    else:
-        # Try to infer verse ID from existing files
-        inferred = infer_verse_id(args.collection, args.verse)
-        if inferred is None:
-            # Inference failed (multiple matches found)
+    # Parse verse argument (supports single number or range)
+    verse_numbers = []
+    if '-' in args.verse:
+        # Range format: M-N
+        try:
+            start, end = args.verse.split('-')
+            start_num = int(start.strip())
+            end_num = int(end.strip())
+            if start_num > end_num:
+                print(f"✗ Error: Invalid range {args.verse} (start must be <= end)")
+                sys.exit(1)
+            verse_numbers = list(range(start_num, end_num + 1))
+        except ValueError:
+            print(f"✗ Error: Invalid verse range format: {args.verse}")
+            print("Use format: M-N (e.g., 1-10, 5-20)")
             sys.exit(1)
-        verse_id = inferred
+    else:
+        # Single verse number
+        try:
+            verse_numbers = [int(args.verse)]
+        except ValueError:
+            print(f"✗ Error: Invalid verse number: {args.verse}")
+            sys.exit(1)
 
-        # Show inference result if it's not the default
-        if verse_id != f"verse_{args.verse:02d}":
-            print(f"\n✓ Auto-detected verse ID: {verse_id}")
-            print(f"  (To override, use --verse-id)\n")
+    # Validate verse_id is not used with ranges
+    if len(verse_numbers) > 1 and args.verse_id:
+        print("✗ Error: Cannot use --verse-id with verse ranges")
+        print("The verse ID is auto-detected for each verse in the range")
+        sys.exit(1)
 
     # Determine what to generate
     generate_image_flag = args.all or args.image
@@ -836,8 +849,10 @@ Environment Variables:
     print("="*60)
 
     print(f"\nCollection: {args.collection}")
-    print(f"Verse: {args.verse}")
-    print(f"Verse ID: {verse_id}")
+    if len(verse_numbers) == 1:
+        print(f"Verse: {verse_numbers[0]}")
+    else:
+        print(f"Verses: {verse_numbers[0]}-{verse_numbers[-1]} ({len(verse_numbers)} verses)")
     if generate_image_flag:
         print(f"Theme: {args.theme}")
 
@@ -865,74 +880,117 @@ Environment Variables:
             print("Set it in .env file or environment")
             sys.exit(1)
 
-    # Track success
-    results = {
-        'regenerate_content': None,
-        'image': None,
-        'audio': None,
-        'embeddings': None
-    }
+    # Track overall success across all verses
+    overall_results = []
 
-    # Generate content in order: regenerate content → image → audio → embeddings
+    # Process each verse in the range
     try:
-        # Step 1: Regenerate AI content (optional)
-        if regenerate_content_flag:
-            # Load canonical Devanagari from data/verses/{collection}.yaml
-            from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
+        for idx, verse_num in enumerate(verse_numbers, 1):
+            # Show progress for batch operations
+            if len(verse_numbers) > 1:
+                print(f"\n{'#'*60}")
+                print(f"# Processing verse {idx}/{len(verse_numbers)}: Verse {verse_num}")
+                print(f"{'#'*60}\n")
 
-            canonical_data = fetch_from_local_file(args.collection, verse_id)
-            if not canonical_data or not canonical_data.get('devanagari'):
-                print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
-                print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
-                results['regenerate_content'] = False
+            # Determine verse ID (with smart inference)
+            if args.verse_id:
+                # User explicitly specified verse ID (only for single verse)
+                verse_id = args.verse_id
             else:
-                # Generate content from canonical text
-                generated_content = generate_verse_content(
-                    canonical_data['devanagari'],
-                    args.collection
-                )
+                # Try to infer verse ID from existing files
+                inferred = infer_verse_id(args.collection, verse_num)
+                if inferred is None:
+                    # Inference failed (multiple matches found)
+                    print(f"⚠ Skipping verse {verse_num} (ambiguous verse ID)")
+                    overall_results.append({
+                        'verse': verse_num,
+                        'success': False,
+                        'reason': 'Ambiguous verse ID'
+                    })
+                    continue
+                verse_id = inferred
 
-                # Update verse markdown file
-                verse_file = Path.cwd() / "_verses" / args.collection / f"{verse_id}.md"
-                results['regenerate_content'] = update_verse_file_with_content(verse_file, generated_content)
+                # Show inference result if it's not the default
+                if len(verse_numbers) == 1 and verse_id != f"verse_{verse_num:02d}":
+                    print(f"\n✓ Auto-detected verse ID: {verse_id}")
+                    print(f"  (To override, use --verse-id)\n")
 
-        # Step 2: Generate image
-        if generate_image_flag:
-            # Ensure scene description exists before generating image
-            from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
+            # Track success for this verse
+            results = {
+                'verse': verse_num,
+                'verse_id': verse_id,
+                'regenerate_content': None,
+                'image': None,
+                'audio': None,
+                'embeddings': None
+            }
 
-            print(f"\n{'='*60}")
-            print("PREPARING SCENE DESCRIPTION")
-            print(f"{'='*60}\n")
+            # Generate content in order: regenerate content → image → audio → embeddings
+            # Step 1: Regenerate AI content (optional)
+            if regenerate_content_flag:
+                # Load canonical Devanagari from data/verses/{collection}.yaml
+                from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
 
-            canonical_data = fetch_from_local_file(args.collection, verse_id)
-            if not canonical_data or not canonical_data.get('devanagari'):
-                print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
-                print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
-                print(f"  Cannot generate scene description without canonical text.", file=sys.stderr)
-                results['image'] = False
-            else:
-                # Ensure scene description exists (creates file/adds description if needed)
-                scene_ready = ensure_scene_description_exists(
-                    args.collection,
-                    args.verse,
-                    verse_id,
-                    canonical_data['devanagari']
-                )
-
-                if scene_ready:
-                    results['image'] = generate_image(args.collection, args.verse, args.theme, verse_id)
+                canonical_data = fetch_from_local_file(args.collection, verse_id)
+                if not canonical_data or not canonical_data.get('devanagari'):
+                    print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
+                    print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
+                    results['regenerate_content'] = False
                 else:
-                    print(f"  ✗ Failed to prepare scene description", file=sys.stderr)
+                    # Generate content from canonical text
+                    generated_content = generate_verse_content(
+                        canonical_data['devanagari'],
+                        args.collection
+                    )
+
+                    # Update verse markdown file
+                    verse_file = Path.cwd() / "_verses" / args.collection / f"{verse_id}.md"
+                    results['regenerate_content'] = update_verse_file_with_content(verse_file, generated_content)
+
+            # Step 2: Generate image
+            if generate_image_flag:
+                # Ensure scene description exists before generating image
+                from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
+
+                print(f"\n{'='*60}")
+                print("PREPARING SCENE DESCRIPTION")
+                print(f"{'='*60}\n")
+
+                canonical_data = fetch_from_local_file(args.collection, verse_id)
+                if not canonical_data or not canonical_data.get('devanagari'):
+                    print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
+                    print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
+                    print(f"  Cannot generate scene description without canonical text.", file=sys.stderr)
                     results['image'] = False
+                else:
+                    # Ensure scene description exists (creates file/adds description if needed)
+                    scene_ready = ensure_scene_description_exists(
+                        args.collection,
+                        verse_num,
+                        verse_id,
+                        canonical_data['devanagari']
+                    )
 
-        # Step 3: Generate audio
-        if generate_audio_flag:
-            results['audio'] = generate_audio(args.collection, args.verse, verse_id)
+                    if scene_ready:
+                        results['image'] = generate_image(args.collection, verse_num, args.theme, verse_id)
+                    else:
+                        print(f"  ✗ Failed to prepare scene description", file=sys.stderr)
+                        results['image'] = False
 
-        # Step 4: Update embeddings
-        if update_embeddings_flag:
-            results['embeddings'] = update_embeddings(args.collection)
+            # Step 3: Generate audio
+            if generate_audio_flag:
+                results['audio'] = generate_audio(args.collection, verse_num, verse_id)
+
+            # Step 4: Update embeddings (only once at the end for batch)
+            if update_embeddings_flag:
+                # For batch operations, only update embeddings after all verses
+                if len(verse_numbers) == 1 or idx == len(verse_numbers):
+                    results['embeddings'] = update_embeddings(args.collection)
+                else:
+                    results['embeddings'] = None  # Will update at the end
+
+            # Store results for this verse
+            overall_results.append(results)
 
     except KeyboardInterrupt:
         print("\n\n⚠ Generation interrupted by user")
@@ -948,35 +1006,101 @@ Environment Variables:
     print("GENERATION SUMMARY")
     print(f"{'='*60}\n")
 
-    if regenerate_content_flag:
-        status = "✓" if results['regenerate_content'] else "✗"
-        print(f"{status} Regenerate content: {'Success' if results['regenerate_content'] else 'Failed'}")
+    if len(overall_results) == 1:
+        # Single verse summary
+        results = overall_results[0]
 
-    if generate_image_flag:
-        status = "✓" if results['image'] else "✗"
-        print(f"{status} Image: {'Success' if results['image'] else 'Failed'}")
+        if regenerate_content_flag:
+            status = "✓" if results['regenerate_content'] else "✗"
+            print(f"{status} Regenerate content: {'Success' if results['regenerate_content'] else 'Failed'}")
 
-    if generate_audio_flag:
-        status = "✓" if results['audio'] else "✗"
-        print(f"{status} Audio: {'Success' if results['audio'] else 'Failed'}")
+        if generate_image_flag:
+            status = "✓" if results['image'] else "✗"
+            print(f"{status} Image: {'Success' if results['image'] else 'Failed'}")
 
-    if update_embeddings_flag:
-        status = "✓" if results['embeddings'] else "✗"
-        print(f"{status} Embeddings: {'Success' if results['embeddings'] else 'Failed'}")
+        if generate_audio_flag:
+            status = "✓" if results['audio'] else "✗"
+            print(f"{status} Audio: {'Success' if results['audio'] else 'Failed'}")
 
-    print()
+        if update_embeddings_flag:
+            status = "✓" if results['embeddings'] else "✗"
+            print(f"{status} Embeddings: {'Success' if results['embeddings'] else 'Failed'}")
 
-    # Exit with appropriate code
-    all_results = [r for r in results.values() if r is not None]
-    if all_results and all(all_results):
-        print("✓ All tasks completed successfully!")
-        sys.exit(0)
-    elif any(all_results):
-        print("⚠ Some tasks completed with errors")
-        sys.exit(1)
+        print()
+
+        # Exit with appropriate code
+        all_results = [r for r in results.values() if r is not None and r != results['verse'] and r != results['verse_id']]
+        if all_results and all(all_results):
+            print("✓ All tasks completed successfully!")
+            sys.exit(0)
+        elif any(all_results):
+            print("⚠ Some tasks completed with errors")
+            sys.exit(1)
+        else:
+            print("✗ All tasks failed")
+            sys.exit(1)
     else:
-        print("✗ All tasks failed")
-        sys.exit(1)
+        # Batch summary
+        print(f"Total verses processed: {len(overall_results)}")
+        print()
+
+        success_count = 0
+        failed_verses = []
+
+        for result in overall_results:
+            if 'reason' in result:
+                # Skipped verse
+                failed_verses.append(f"  Verse {result['verse']}: {result['reason']}")
+                continue
+
+            # Check if all operations succeeded
+            ops = []
+            if regenerate_content_flag and result['regenerate_content'] is not None:
+                ops.append(result['regenerate_content'])
+            if generate_image_flag and result['image'] is not None:
+                ops.append(result['image'])
+            if generate_audio_flag and result['audio'] is not None:
+                ops.append(result['audio'])
+
+            if ops and all(ops):
+                success_count += 1
+            else:
+                failed_ops = []
+                if regenerate_content_flag and not result['regenerate_content']:
+                    failed_ops.append("content")
+                if generate_image_flag and not result['image']:
+                    failed_ops.append("image")
+                if generate_audio_flag and not result['audio']:
+                    failed_ops.append("audio")
+
+                failed_verses.append(f"  Verse {result['verse']}: {', '.join(failed_ops)}")
+
+        print(f"✓ Successful: {success_count}/{len(overall_results)}")
+
+        if failed_verses:
+            print(f"✗ Failed: {len(failed_verses)}/{len(overall_results)}")
+            for fv in failed_verses:
+                print(fv)
+
+        if update_embeddings_flag:
+            # Report embeddings update (done once at the end)
+            last_result = overall_results[-1]
+            if last_result.get('embeddings'):
+                print("\n✓ Embeddings updated for collection")
+            else:
+                print("\n✗ Embeddings update failed")
+
+        print()
+
+        if success_count == len(overall_results):
+            print("✓ All verses completed successfully!")
+            sys.exit(0)
+        elif success_count > 0:
+            print("⚠ Some verses completed with errors")
+            sys.exit(1)
+        else:
+            print("✗ All verses failed")
+            sys.exit(1)
 
 
 if __name__ == '__main__':
