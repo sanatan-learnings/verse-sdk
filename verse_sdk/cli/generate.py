@@ -368,7 +368,7 @@ def infer_verse_id(collection: str, verse_number: int, project_dir: Path = Path.
         return f"verse_{verse_number:02d}"
 
 
-def generate_image(collection: str, verse: int, theme: str) -> bool:
+def generate_image(collection: str, verse: int, theme: str, verse_id: str = None) -> bool:
     """Generate image for the specified verse."""
     print(f"\n{'='*60}")
     print("GENERATING IMAGE")
@@ -381,8 +381,9 @@ def generate_image(collection: str, verse: int, theme: str) -> bool:
         print(f"Please create scene descriptions in {prompts_file} first")
         return False
 
-    # Construct the verse identifier
-    verse_id = f"verse_{verse:02d}"
+    # Use provided verse_id or default to verse_{N:02d}
+    if not verse_id:
+        verse_id = f"verse_{verse:02d}"
 
     print(f"✓ Collection: {collection}")
     print(f"✓ Verse: {verse_id}")
@@ -408,15 +409,18 @@ def generate_image(collection: str, verse: int, theme: str) -> bool:
         return False
 
 
-def generate_audio(collection: str, verse: int) -> bool:
+def generate_audio(collection: str, verse: int, verse_id: str = None) -> bool:
     """Generate audio for the specified verse."""
     print(f"\n{'='*60}")
     print("GENERATING AUDIO")
     print(f"{'='*60}\n")
 
+    # Use provided verse_id or default to verse_{N:02d}
+    if not verse_id:
+        verse_id = f"verse_{verse:02d}"
+
     # Check if verse file exists
     verses_dir = Path.cwd() / "_verses" / collection
-    verse_id = f"verse_{verse:02d}"
     verse_file = verses_dir / f"{verse_id}.md"
 
     if not verse_file.exists():
@@ -765,11 +769,11 @@ Environment Variables:
 
         # Step 2: Generate image
         if generate_image_flag:
-            results['image'] = generate_image(args.collection, args.verse, args.theme)
+            results['image'] = generate_image(args.collection, args.verse, args.theme, verse_id)
 
         # Step 3: Generate audio
         if generate_audio_flag:
-            results['audio'] = generate_audio(args.collection, args.verse)
+            results['audio'] = generate_audio(args.collection, args.verse, verse_id)
 
         # Step 4: Update embeddings
         if update_embeddings_flag:
