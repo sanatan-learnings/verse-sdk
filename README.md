@@ -24,25 +24,27 @@ export ELEVENLABS_API_KEY=...
 # List available collections
 verse-generate --list-collections
 
-# Generate image and audio for a verse (simplest form)
+# Complete workflow (default) - fetch text, generate media, update embeddings
 verse-generate --collection hanuman-chalisa --verse 15
 
-# Complete workflow: fetch text, generate media, update embeddings
-verse-generate --collection sundar-kaand --verse 5 --fetch-text --update-embeddings
+# Skip text fetching (when verse text already exists)
+verse-generate --collection sundar-kaand --verse 5 --no-fetch-text
 
 # Or generate specific components only
 verse-generate --collection sundar-kaand --verse 3 --image
 verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 ```
 
-By default, the command generates:
-- ✅ DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
-- ✅ Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
-- ✅ Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
+By default, the complete workflow includes:
+- 🔍 Fetch traditional Devanagari text from authoritative sources
+- 🎨 DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
+- 🎵 Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
+- 🎵 Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
+- 🔗 Update vector embeddings for semantic search
 
-Optional flags for complete workflow:
-- 🔍 `--fetch-text` - Fetch traditional Devanagari text from authoritative sources
-- 🔗 `--update-embeddings` - Update vector embeddings for semantic search
+Opt-out flags (to skip specific steps):
+- `--no-fetch-text` - Skip fetching text from authoritative sources
+- `--no-update-embeddings` - Skip updating embeddings
 
 ## Installation
 
@@ -65,7 +67,7 @@ pip install -e .
 - **[verse-images](docs/commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](docs/commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](docs/commands/verse-embeddings.md)** - Generate vector embeddings for semantic search ([multi-collection guide](docs/multi-collection.md))
-- **verse-deploy** - Deploy Cloudflare Worker for API proxy
+- **[verse-deploy](docs/commands/verse-deploy.md)** - Deploy Cloudflare Worker for API proxy
 
 ## Configuration
 

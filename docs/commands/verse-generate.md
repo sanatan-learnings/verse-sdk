@@ -10,14 +10,13 @@ verse-generate --collection COLLECTION --verse N [OPTIONS]
 
 ## Description
 
-The `verse-generate` command is a complete orchestrator for verse content generation. It can:
-- Fetch traditional Devanagari text from authoritative sources
-- Generate images using DALL-E 3
-- Generate audio pronunciations using ElevenLabs
-- Update vector embeddings for semantic search
-- Execute the entire workflow in a single command
+The `verse-generate` command is a complete orchestrator for verse content generation. **By default**, it executes the entire workflow:
+- Fetches traditional Devanagari text from authoritative sources
+- Generates images using DALL-E 3
+- Generates audio pronunciations using ElevenLabs
+- Updates vector embeddings for semantic search
 
-Verse files can either already exist in your collection, or you can use `--fetch-text` to retrieve them automatically.
+You can opt-out of specific steps using `--no-fetch-text` or `--no-update-embeddings` flags.
 
 ## Options
 
@@ -31,8 +30,8 @@ Verse files can either already exist in your collection, or you can use `--fetch
 - `--all` - Generate both image and audio (this is the default behavior if no flags specified)
 - `--image` - Generate image only
 - `--audio` - Generate audio only
-- `--fetch-text` - Fetch traditional Devanagari text from authoritative sources (before generation)
-- `--update-embeddings` - Update vector embeddings for semantic search (after generation)
+- `--no-fetch-text` - Skip fetching text from authoritative sources (text fetching is enabled by default)
+- `--no-update-embeddings` - Skip updating embeddings (embeddings update is enabled by default)
 - `--theme NAME` - Image theme name (default: modern-minimalist)
 - `--verse-id ID` - Override verse identifier (e.g., chaupai_05, doha_01). Auto-detected if not specified
 - `--list-collections` - List all available collections
@@ -45,25 +44,12 @@ Verse files can either already exist in your collection, or you can use `--fetch
 verse-generate --list-collections
 ```
 
-### Simplest Form (Recommended)
+### Complete Workflow (Default)
 
-Generate everything with default theme when verse files already exist:
+The simplest form runs the complete workflow:
 
 ```bash
 verse-generate --collection hanuman-chalisa --verse 15
-```
-
-This automatically generates:
-- DALL-E 3 image (using modern-minimalist theme)
-- Full-speed audio pronunciation
-- Slow-speed audio pronunciation (0.75x)
-
-### Complete Workflow
-
-Generate everything including text fetching and embeddings:
-
-```bash
-verse-generate --collection sundar-kaand --verse 5 --fetch-text --update-embeddings
 ```
 
 This automatically:
@@ -72,6 +58,30 @@ This automatically:
 3. Generates full-speed audio pronunciation
 4. Generates slow-speed audio pronunciation (0.75x)
 5. Updates vector embeddings for semantic search
+
+### Skip Text Fetching
+
+When verse text already exists and you don't need to refetch:
+
+```bash
+verse-generate --collection sundar-kaand --verse 5 --no-fetch-text
+```
+
+### Skip Embeddings Update
+
+Faster generation, but search won't include this verse:
+
+```bash
+verse-generate --collection hanuman-chalisa --verse 15 --no-update-embeddings
+```
+
+### Skip Both (Just Regenerate Media)
+
+When you only want to regenerate image/audio with existing text:
+
+```bash
+verse-generate --collection hanuman-chalisa --verse 15 --no-fetch-text --no-update-embeddings
+```
 
 ### Custom Theme
 
@@ -171,10 +181,11 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 
 ## Notes
 
-- **Default behavior**: Generates both image and audio with `modern-minimalist` theme (no flags needed)
+- **Default behavior**: Complete workflow - fetches text, generates image + audio with `modern-minimalist` theme, updates embeddings
+- Use `--no-fetch-text` to skip text fetching (when verse text already exists)
+- Use `--no-update-embeddings` to skip embeddings update (faster, but search won't include this verse)
 - Use `--image` or `--audio` to generate only specific components
 - Use `--theme` to change from the default `modern-minimalist` theme
-- Verse files can be fetched automatically using `--fetch-text` or must already exist in `_verses/<collection-key>/`
 - Verse ID is automatically detected from existing verse files (e.g., if `chaupai_05.md` exists, uses `chaupai_05`)
 - Use `--verse-id` to override auto-detection when multiple files match (e.g., both `chaupai_05.md` and `doha_05.md` exist)
 - For new verses without files, defaults to `verse_{N:02d}` format
@@ -182,7 +193,7 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 - Theme configuration must exist in `docs/themes/<collection-key>/<theme-name>.yml` for image generation
 - Audio generation reads from the `devanagari:` field in verse files
 - Only enabled collections (in `collections.yml`) can be processed
-- `--update-embeddings` updates embeddings for all collections, not just the current one
+- Embeddings update processes all collections, not just the current one
 
 ## See Also
 

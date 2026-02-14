@@ -9,6 +9,7 @@ Detailed documentation for the verse-sdk commands and features.
 - **[verse-images](commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](commands/verse-embeddings.md)** - Generate vector embeddings for semantic search
+- **[verse-deploy](commands/verse-deploy.md)** - Deploy Cloudflare Workers as OpenAI API proxy
 
 ## Guides
 

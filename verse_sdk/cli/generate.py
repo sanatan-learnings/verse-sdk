@@ -325,21 +325,20 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Simplest form - generates everything with default theme (modern-minimalist)
+  # Complete workflow (default) - fetch text, generate media, update embeddings
   verse-generate --collection hanuman-chalisa --verse 15
-
-  # Complete workflow: fetch text, generate media, update embeddings
-  verse-generate --collection sundar-kaand --verse 5 \\
-    --fetch-text --update-embeddings
 
   # With custom theme
   verse-generate --collection hanuman-chalisa --verse 15 --theme kids-friendly
 
-  # Fetch text only (useful for previewing before generation)
-  verse-generate --collection sundar-kaand --verse 5 --fetch-text
+  # Skip text fetching (when verse text already exists)
+  verse-generate --collection sundar-kaand --verse 5 --no-fetch-text
 
-  # Override auto-detected verse ID (only needed for ambiguous cases)
-  verse-generate --collection sundar-kaand --verse 5 --verse-id chaupai_05
+  # Skip embeddings update (faster, but search won't include this verse)
+  verse-generate --collection hanuman-chalisa --verse 15 --no-update-embeddings
+
+  # Skip both (just regenerate media)
+  verse-generate --collection hanuman-chalisa --verse 15 --no-fetch-text --no-update-embeddings
 
   # Generate only image
   verse-generate --collection sundar-kaand --verse 3 --image
@@ -347,11 +346,15 @@ Examples:
   # Generate only audio
   verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
+  # Override auto-detected verse ID (only needed for ambiguous cases)
+  verse-generate --collection sundar-kaand --verse 5 --verse-id chaupai_05
+
   # List available collections
   verse-generate --list-collections
 
 Note:
-  - Generates both image and audio by default (use --image or --audio for specific components)
+  - Complete workflow by default: fetches text, generates image + audio, updates embeddings
+  - Use --no-fetch-text or --no-update-embeddings to opt-out of specific steps
   - Theme defaults to "modern-minimalist" (use --theme to change)
   - Verse ID is automatically detected from existing verse files
   - Use --verse-id only when multiple files match (e.g., chaupai_05 and doha_05)
@@ -401,16 +404,32 @@ Environment Variables:
         help="Generate audio pronunciation only"
     )
 
-    # Additional operations
+    # Additional operations (enabled by default)
     parser.add_argument(
         "--fetch-text",
+        dest="fetch_text",
         action="store_true",
-        help="Fetch traditional Devanagari text from authoritative sources (before generation)"
+        default=True,
+        help="Fetch traditional Devanagari text from authoritative sources (default: enabled)"
+    )
+    parser.add_argument(
+        "--no-fetch-text",
+        dest="fetch_text",
+        action="store_false",
+        help="Skip fetching text from authoritative sources"
     )
     parser.add_argument(
         "--update-embeddings",
+        dest="update_embeddings",
         action="store_true",
-        help="Update vector embeddings for semantic search (after generation)"
+        default=True,
+        help="Update vector embeddings for semantic search (default: enabled)"
+    )
+    parser.add_argument(
+        "--no-update-embeddings",
+        dest="update_embeddings",
+        action="store_false",
+        help="Skip updating embeddings"
     )
 
     # Theme for image generation
