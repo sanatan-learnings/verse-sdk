@@ -13,6 +13,7 @@ Detailed documentation for the verse-sdk commands and features.
 
 ## Guides
 
+- **[Development Guide](development.md)** - Setup and contributing to verse-sdk
 - **[Multi-Collection Guide](multi-collection.md)** - Working with multiple verse collections
 - **[Troubleshooting](troubleshooting.md)** - Common issues and solutions
 - **[Publishing](publishing.md)** - For maintainers: How to publish releases
@@ -21,4 +22,4 @@ Detailed documentation for the verse-sdk commands and features.
 
 - [Main README](../README.md) - Installation, features, and getting started
 - [GitHub Repository](https://github.com/sanatan-learnings/verse-sdk)
-- [Example Project](https://github.com/sanatan-learnings/hanuman-chalisa)
+- [Example Project](https://github.com/sanatan-learnings/hanuman-gpt)

@@ -52,14 +52,6 @@ Opt-out flags (to skip specific steps):
 pip install verse-sdk
 ```
 
-### For Development
-
-```bash
-git clone https://github.com/sanatan-learnings/verse-sdk.git
-cd verse-sdk
-pip install -e .
-```
-
 ## Commands
 
 - **[verse-generate](docs/commands/verse-generate.md)** - Complete orchestrator for verse content (text fetching, multimedia generation, embeddings)
@@ -180,6 +172,7 @@ done
 ## Documentation
 
 - **[Command Reference](docs/README.md)** - Detailed documentation for all commands
+- **[Development Guide](docs/development.md)** - Setup and contributing to verse-sdk
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions
 - **[Multi-Collection Guide](docs/multi-collection.md)** - Working with multiple collections
 - **[Publishing Guide](docs/publishing.md)** - For maintainers
