@@ -18,9 +18,9 @@ Complete toolkit for generating rich multimedia content for spiritual text colle
 # Install
 pip install verse-sdk
 
-# Set up API keys
-export OPENAI_API_KEY=sk-...
-export ELEVENLABS_API_KEY=...
+# Set up API keys (in your project directory)
+cp .env.example .env
+# Edit .env and add your API keys
 
 # List available collections
 verse-generate --list-collections
