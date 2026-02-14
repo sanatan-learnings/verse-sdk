@@ -4,8 +4,8 @@ Complete toolkit for generating rich multimedia content for spiritual text colle
 
 ## Features
 
-- **🔄 Complete Workflow**: Fetch text, generate media, and update embeddings - all in one command
-- **📖 Text Sources**: Read from local YAML files or fetch from authoritative online sources
+- **🔄 Complete Workflow**: Generate media and embeddings from canonical sources - all in one command
+- **📖 Canonical Sources**: Local YAML files ensure text accuracy and quality
 - **🎨 AI Images**: Generate themed images with DALL-E 3
 - **🎵 Audio Pronunciation**: Full and slow-speed audio with ElevenLabs
 - **🔍 Semantic Search**: Vector embeddings for intelligent verse discovery
@@ -37,15 +37,15 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 ```
 
 By default, the complete workflow includes:
-- 🔍 Fetch traditional Devanagari text (from local YAML files or web sources)
+- 🔍 Read canonical Devanagari text from local YAML files
 - 🎨 DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
 - 🎵 Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
 - 🎵 Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
 - 🔗 Update vector embeddings for semantic search
 
-**Text Sources** (checked in order):
-1. Local YAML file: `data/verses/{collection}.yaml` or `.yml` (recommended)
-2. Web scraping from authoritative sources (fallback)
+**Text Source**:
+- Local YAML file: `data/verses/{collection}.yaml` or `.yml` (required)
+- You must create this file with canonical verse text (see [Local Verses Guide](docs/local-verses.md))
 
 Opt-out flags (to skip specific steps):
 - `--no-fetch-text` - Skip fetching text (use when verse text already exists)

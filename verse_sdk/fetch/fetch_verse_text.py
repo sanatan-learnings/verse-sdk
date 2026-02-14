@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Fetch traditional Devanagari verse text from local files or authoritative online sources.
+Fetch traditional Devanagari verse text from local canonical sources.
 
-This script first checks for local YAML files in data/verses/{collection}.yaml,
-then falls back to scraping verse text from reputable online sources if needed.
+This script reads verse text from local YAML files in data/verses/{collection}.yaml (or .yml).
+Canonical source files must be created manually to ensure text accuracy and quality.
 """
 
 import sys
@@ -218,7 +218,7 @@ def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
 
     print(f"Fetching {verse_type} {verse_num} from {collection}...", file=sys.stderr)
 
-    # Step 1: Try local file first
+    # Check local file (only source)
     local_data = fetch_from_local_file(collection, verse_id)
     if local_data:
         print(f"✓ Found in local file: data/verses/{collection}.{{yaml,yml}}", file=sys.stderr)
@@ -236,34 +236,19 @@ def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
             "verified": True
         }
 
-    # Step 2: Fall back to internet sources
-    print(f"✓ Local file not found, fetching from internet...", file=sys.stderr)
-    text = fetch_from_ramcharitmanas_net(collection, verse_num, verse_type)
-
-    if text:
-        return {
-            "success": True,
-            "collection": collection,
-            "verse_id": verse_id,
-            "verse_type": verse_type,
-            "verse_number": verse_num,
-            "devanagari": text,
-            "source": "ramcharitmanas.net",
-            "verified": True
-        }
-
+    # No local file found - fail with clear error
     return {
         "success": False,
-        "error": f"Could not fetch verse text from any source",
+        "error": f"Canonical source not found. Please create data/verses/{collection}.yaml with verse text for '{verse_id}'",
         "collection": collection,
         "verse_id": verse_id,
-        "tried_sources": ["local_file", "ramcharitmanas.net"]
+        "help": f"See docs/local-verses.md for format details"
     }
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Fetch traditional Devanagari verse text from authoritative sources"
+        description="Fetch traditional Devanagari verse text from local canonical sources (data/verses/{collection}.yaml)"
     )
     parser.add_argument(
         "--collection",

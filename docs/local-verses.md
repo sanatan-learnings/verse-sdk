@@ -1,6 +1,6 @@
 # Local Verse Files
 
-Use local YAML files as the canonical source for verse text instead of web scraping.
+Local YAML files are the canonical source for verse text, ensuring accuracy and quality control.
 
 ## Quick Start
 
@@ -103,19 +103,18 @@ _meta:
 
 ## How It Works
 
-SDK checks sources in this order:
+SDK reads canonical text from local YAML files:
 
-1. **Local file** (`data/verses/{collection}.yaml` or `.yml`) - instant
-2. **Web scraping** (ramcharitmanas.net, etc.) - fallback
+**Required**: `data/verses/{collection}.yaml` or `.yml`
 
 ```bash
-# Found in local file - fast
+# Found in local file
 verse-fetch-text --collection sundar-kaand --verse chaupai_01
 # ✓ Found in local file: data/verses/sundar-kaand.{yaml,yml}
 
-# Not in local file - falls back to web
+# Not in local file - clear error message
 verse-fetch-text --collection sundar-kaand --verse chaupai_99
-# ✓ Local file not found, fetching from internet...
+# ✗ Error: Canonical source not found. Please create data/verses/sundar-kaand.yaml with verse text for 'chaupai_99'
 ```
 
 ## Example: Complete File
