@@ -3,7 +3,8 @@
 Collection-aware verse content generator - complete orchestration of all verse content.
 
 This command is the one-stop solution for generating all content for a verse:
-- Fetch traditional Devanagari text from authoritative sources (optional)
+- Fetch traditional Devanagari text from canonical sources (optional)
+- Regenerate AI content from canonical text (transliteration, meaning, translation, story)
 - Generate AI image with DALL-E 3
 - Generate audio pronunciation with ElevenLabs (full + slow speed)
 - Update vector embeddings for semantic search
@@ -12,8 +13,11 @@ Usage:
     # Generate everything for a verse
     verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist --update-embeddings
 
-    # Fetch text, then generate image and audio
-    verse-generate --collection sundar-kaand --verse 3 --fetch-text --all --theme modern-minimalist
+    # Regenerate AI content from canonical source
+    verse-generate --collection sundar-kaand --verse 3 --regenerate-content
+
+    # Regenerate content and multimedia
+    verse-generate --collection sundar-kaand --verse 3 --regenerate-content --all
 
     # Generate only image
     verse-generate --collection sundar-kaand --verse 3 --image --theme modern-minimalist
@@ -22,7 +26,7 @@ Usage:
     verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
 Requirements:
-    - OPENAI_API_KEY environment variable (for image generation and embeddings)
+    - OPENAI_API_KEY environment variable (for content generation, image generation, and embeddings)
     - ELEVENLABS_API_KEY environment variable (for audio generation)
 """
 
@@ -43,8 +47,208 @@ except ImportError:
     print("Install with: pip install python-dotenv")
     sys.exit(1)
 
+try:
+    from openai import OpenAI
+except ImportError:
+    print("Error: openai package not installed")
+    print("Install with: pip install openai")
+    sys.exit(1)
+
 # Load environment variables
 load_dotenv()
+
+
+def generate_verse_content(devanagari_text: str, collection: str) -> dict:
+    """
+    Generate AI content (transliteration, meaning, translation, story) from Devanagari text.
+
+    Args:
+        devanagari_text: The canonical Devanagari verse text
+        collection: Collection key for context
+
+    Returns:
+        Dictionary with generated content fields
+    """
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        print("Error: OPENAI_API_KEY environment variable not set", file=sys.stderr)
+        sys.exit(1)
+
+    client = OpenAI(api_key=api_key)
+
+    prompt = f"""You are an expert in Sanskrit/Hindi spiritual texts. Given this verse from {collection}:
+
+Devanagari: {devanagari_text}
+
+Please provide:
+
+1. TRANSLITERATION (IAST format, precisely matching the Devanagari):
+[Your transliteration here]
+
+2. WORD-BY-WORD MEANING:
+[Detailed breakdown of each word/phrase in the verse]
+
+3. ENGLISH TRANSLATION (natural, flowing translation):
+[Your translation here]
+
+4. STORY & CONTEXT (2-3 paragraphs explaining the context, significance, and deeper meaning):
+[Your story/explanation here]
+
+5. PRACTICAL APPLICATIONS (2-3 practical ways to apply this verse's teachings in daily life):
+[Your practical applications here]
+
+Format your response exactly as above with clear section headers."""
+
+    try:
+        print(f"  → Generating AI content from canonical text...", file=sys.stderr)
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an expert in Sanskrit and Hindi spiritual texts, providing accurate transliterations, translations, and meaningful interpretations."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3  # Lower temperature for more consistent, accurate results
+        )
+
+        content = response.choices[0].message.content
+
+        # Parse the response into structured fields
+        result = {
+            "devanagari": devanagari_text,
+            "transliteration": "",
+            "meaning": "",
+            "translation": {"en": ""},
+            "story": "",
+            "practical_applications": ""
+        }
+
+        # Simple parsing - split by section headers
+        sections = content.split("\n\n")
+        current_section = None
+
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+
+            if "TRANSLITERATION" in section.upper():
+                current_section = "transliteration"
+                # Get text after the header
+                lines = section.split("\n")[1:]
+                result["transliteration"] = "\n".join(lines).strip()
+            elif "WORD-BY-WORD" in section.upper() or "MEANING" in section.upper():
+                current_section = "meaning"
+                lines = section.split("\n")[1:]
+                result["meaning"] = "\n".join(lines).strip()
+            elif "TRANSLATION" in section.upper():
+                current_section = "translation"
+                lines = section.split("\n")[1:]
+                result["translation"]["en"] = "\n".join(lines).strip()
+            elif "STORY" in section.upper() or "CONTEXT" in section.upper():
+                current_section = "story"
+                lines = section.split("\n")[1:]
+                result["story"] = "\n".join(lines).strip()
+            elif "PRACTICAL" in section.upper() or "APPLICATIONS" in section.upper():
+                current_section = "practical_applications"
+                lines = section.split("\n")[1:]
+                result["practical_applications"] = "\n".join(lines).strip()
+            elif current_section and not any(keyword in section.upper() for keyword in ["1.", "2.", "3.", "4.", "5."]):
+                # Continue current section
+                result[current_section if current_section != "translation" else "translation"]["en" if current_section == "translation" else current_section] += "\n" + section
+
+        print(f"  ✓ Generated transliteration, meaning, translation, story, and practical applications", file=sys.stderr)
+        return result
+
+    except Exception as e:
+        print(f"  ✗ Error generating content: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
+    """
+    Update verse markdown file with generated content.
+
+    Args:
+        verse_file: Path to the verse markdown file
+        content: Dictionary with generated content fields
+
+    Returns:
+        True if successful, False otherwise
+    """
+    if not verse_file.exists():
+        print(f"  ✗ Verse file not found: {verse_file}", file=sys.stderr)
+        return False
+
+    try:
+        # Read existing file
+        with open(verse_file, 'r', encoding='utf-8') as f:
+            file_content = f.read()
+
+        # Parse frontmatter and body
+        if not file_content.startswith('---'):
+            print(f"  ✗ Invalid verse file format (no frontmatter): {verse_file}", file=sys.stderr)
+            return False
+
+        parts = file_content.split('---', 2)
+        if len(parts) < 3:
+            print(f"  ✗ Invalid verse file format (incomplete frontmatter): {verse_file}", file=sys.stderr)
+            return False
+
+        frontmatter = yaml.safe_load(parts[1]) or {}
+        body = parts[2]
+
+        # Update frontmatter with generated content
+        frontmatter['devanagari'] = content['devanagari']
+        frontmatter['transliteration'] = content['transliteration']
+        frontmatter['meaning'] = content['meaning']
+        frontmatter['translation'] = content['translation']
+
+        # Build updated content
+        updated_content = "---\n"
+        updated_content += yaml.dump(frontmatter, allow_unicode=True, sort_keys=False)
+        updated_content += "---"
+
+        # Update body if we have story and practical applications
+        if content.get('story') or content.get('practical_applications'):
+            # Replace or add story and practical applications sections
+            if '## Story' in body or '## Context' in body:
+                # Replace existing story section
+                import re
+                body = re.sub(
+                    r'## (Story|Context).*?(?=##|$)',
+                    f"## Story & Context\n\n{content.get('story', '')}\n\n",
+                    body,
+                    flags=re.DOTALL
+                )
+            else:
+                # Add story section
+                body += f"\n\n## Story & Context\n\n{content.get('story', '')}\n"
+
+            if '## Practical' in body:
+                # Replace existing practical applications
+                import re
+                body = re.sub(
+                    r'## Practical.*?(?=##|$)',
+                    f"## Practical Applications\n\n{content.get('practical_applications', '')}\n\n",
+                    body,
+                    flags=re.DOTALL
+                )
+            else:
+                # Add practical applications section
+                body += f"\n## Practical Applications\n\n{content.get('practical_applications', '')}\n"
+
+        updated_content += body
+
+        # Write updated file
+        with open(verse_file, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+
+        print(f"  ✓ Updated verse file: {verse_file.name}", file=sys.stderr)
+        return True
+
+    except Exception as e:
+        print(f"  ✗ Error updating verse file: {e}", file=sys.stderr)
+        return False
 
 
 def find_command(command_name: str) -> str:
@@ -346,6 +550,12 @@ Examples:
   # Generate only audio
   verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
+  # Regenerate AI content from canonical source
+  verse-generate --collection sundar-kaand --verse 3 --regenerate-content
+
+  # Regenerate content and multimedia
+  verse-generate --collection sundar-kaand --verse 3 --regenerate-content --all
+
   # Override auto-detected verse ID (only needed for ambiguous cases)
   verse-generate --collection sundar-kaand --verse 5 --verse-id chaupai_05
 
@@ -432,6 +642,13 @@ Environment Variables:
         help="Skip updating embeddings"
     )
 
+    # Content regeneration
+    parser.add_argument(
+        "--regenerate-content",
+        action="store_true",
+        help="Regenerate AI content (transliteration, meaning, translation, story) from canonical Devanagari text"
+    )
+
     # Theme for image generation
     parser.add_argument(
         "--theme",
@@ -491,6 +708,7 @@ Environment Variables:
     generate_audio_flag = args.all or args.audio
     fetch_text_flag = args.fetch_text
     update_embeddings_flag = args.update_embeddings
+    regenerate_content_flag = args.regenerate_content
 
     # Display header
     print("\n" + "="*60)
@@ -506,6 +724,8 @@ Environment Variables:
     print("\nOperations:")
     if fetch_text_flag:
         print("  ✓ Fetch verse text")
+    if regenerate_content_flag:
+        print("  ✓ Regenerate AI content (transliteration, meaning, translation, story)")
     if generate_image_flag:
         print("  ✓ Generate image")
     if generate_audio_flag:
@@ -515,9 +735,9 @@ Environment Variables:
     print()
 
     # Check API keys
-    if generate_image_flag or update_embeddings_flag:
+    if generate_image_flag or update_embeddings_flag or regenerate_content_flag:
         if not os.getenv("OPENAI_API_KEY"):
-            print("✗ Error: OPENAI_API_KEY not set (required for image generation and embeddings)")
+            print("✗ Error: OPENAI_API_KEY not set (required for content generation, image generation, and embeddings)")
             print("Set it in .env file or environment")
             sys.exit(1)
 
@@ -530,27 +750,49 @@ Environment Variables:
     # Track success
     results = {
         'fetch_text': None,
+        'regenerate_content': None,
         'image': None,
         'audio': None,
         'embeddings': None
     }
 
-    # Generate content in order: fetch → image → audio → embeddings
+    # Generate content in order: fetch → regenerate content → image → audio → embeddings
     try:
         # Step 1: Fetch verse text (optional)
         if fetch_text_flag:
             text_data = fetch_verse_text(args.collection, verse_id)
             results['fetch_text'] = text_data is not None
 
-        # Step 2: Generate image
+        # Step 2: Regenerate AI content (optional)
+        if regenerate_content_flag:
+            # Load canonical Devanagari from data/verses/{collection}.yaml
+            from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
+
+            canonical_data = fetch_from_local_file(args.collection, verse_id)
+            if not canonical_data or not canonical_data.get('devanagari'):
+                print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
+                print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
+                results['regenerate_content'] = False
+            else:
+                # Generate content from canonical text
+                generated_content = generate_verse_content(
+                    canonical_data['devanagari'],
+                    args.collection
+                )
+
+                # Update verse markdown file
+                verse_file = Path.cwd() / "_verses" / args.collection / f"{verse_id}.md"
+                results['regenerate_content'] = update_verse_file_with_content(verse_file, generated_content)
+
+        # Step 3: Generate image
         if generate_image_flag:
             results['image'] = generate_image(args.collection, args.verse, args.theme)
 
-        # Step 3: Generate audio
+        # Step 4: Generate audio
         if generate_audio_flag:
             results['audio'] = generate_audio(args.collection, args.verse)
 
-        # Step 4: Update embeddings
+        # Step 5: Update embeddings
         if update_embeddings_flag:
             results['embeddings'] = update_embeddings(args.collection)
 
@@ -571,6 +813,10 @@ Environment Variables:
     if fetch_text_flag:
         status = "✓" if results['fetch_text'] else "✗"
         print(f"{status} Fetch text: {'Success' if results['fetch_text'] else 'Failed'}")
+
+    if regenerate_content_flag:
+        status = "✓" if results['regenerate_content'] else "✗"
+        print(f"{status} Regenerate content: {'Success' if results['regenerate_content'] else 'Failed'}")
 
     if generate_image_flag:
         status = "✓" if results['image'] else "✗"

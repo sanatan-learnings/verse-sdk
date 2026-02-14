@@ -10,11 +10,13 @@ verse-generate --collection COLLECTION --verse N [OPTIONS]
 
 ## Description
 
-The `verse-generate` command is a complete orchestrator for verse content generation. **By default**, it executes the entire workflow:
-- Fetches traditional Devanagari text from authoritative sources
+The `verse-generate` command is a complete orchestrator for verse content generation. **By default**, it executes the multimedia workflow:
+- Reads canonical Devanagari text from local sources
 - Generates images using DALL-E 3
 - Generates audio pronunciations using ElevenLabs
 - Updates vector embeddings for semantic search
+
+Additionally, you can regenerate AI content (transliteration, meaning, translation, story) from the canonical source using `--regenerate-content`.
 
 You can opt-out of specific steps using `--no-fetch-text` or `--no-update-embeddings` flags.
 
@@ -30,7 +32,8 @@ You can opt-out of specific steps using `--no-fetch-text` or `--no-update-embedd
 - `--all` - Generate both image and audio (this is the default behavior if no flags specified)
 - `--image` - Generate image only
 - `--audio` - Generate audio only
-- `--no-fetch-text` - Skip fetching text from authoritative sources (text fetching is enabled by default)
+- `--regenerate-content` - Regenerate AI content (transliteration, meaning, translation, story) from canonical Devanagari text
+- `--no-fetch-text` - Skip fetching text from canonical sources (text fetching is enabled by default)
 - `--no-update-embeddings` - Skip updating embeddings (embeddings update is enabled by default)
 - `--theme NAME` - Image theme name (default: modern-minimalist)
 - `--verse-id ID` - Override verse identifier (e.g., chaupai_05, doha_01). Auto-detected if not specified
@@ -103,6 +106,28 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 # Image and audio with specific theme
 verse-generate --collection hanuman-chalisa --verse 20 --all --theme kids-friendly
 ```
+
+### Regenerate AI Content
+
+When you update the canonical Devanagari text in `data/verses/{collection}.yaml` and want to regenerate all AI-generated content:
+
+```bash
+# Regenerate only AI content (transliteration, meaning, translation, story)
+verse-generate --collection sundar-kaand --verse 3 --regenerate-content
+
+# Regenerate AI content AND multimedia
+verse-generate --collection sundar-kaand --verse 3 --regenerate-content --all
+
+# Regenerate content without updating embeddings (faster)
+verse-generate --collection sundar-kaand --verse 3 --regenerate-content --no-update-embeddings
+```
+
+This reads the canonical Devanagari text from `data/verses/{collection}.yaml` and uses GPT-4 to generate:
+- Transliteration (IAST format)
+- Word-by-word meaning
+- English translation
+- Story & context (2-3 paragraphs)
+- Practical applications (2-3 ways to apply teachings)
 
 ### Different Collections
 
