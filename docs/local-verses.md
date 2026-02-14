@@ -110,15 +110,7 @@ SDK reads canonical text from local YAML files:
 
 **Required**: `data/verses/{collection}.yaml` or `.yml`
 
-```bash
-# Found in local file
-verse-fetch-text --collection sundar-kaand --verse chaupai_01
-# ✓ Found in local file: data/verses/sundar-kaand.{yaml,yml}
-
-# Not in local file - clear error message
-verse-fetch-text --collection sundar-kaand --verse chaupai_99
-# ✗ Error: Canonical source not found. Please create data/verses/sundar-kaand.yaml with verse text for 'chaupai_99'
-```
+All commands automatically read from local YAML files for verse text.
 
 ## Example: Complete File
 
@@ -182,6 +174,7 @@ Error reading local verses file data/verses/sundar-kaand.yaml
 
 ## See Also
 
-- [verse-fetch-text](commands/verse-fetch-text.md) - Fetch verse text command
 - [verse-generate](commands/verse-generate.md) - Complete content generation
+- [verse-status](commands/verse-status.md) - Check status and validate text
+- [verse-sync](commands/verse-sync.md) - Sync verse text with canonical source
 - [Usage Guide](usage.md) - Project structure and workflows

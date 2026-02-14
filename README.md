@@ -63,7 +63,6 @@ pip install sanatan-sdk
 - **[verse-translate](docs/commands/verse-translate.md)** - Translate verses into multiple languages (Hindi, Spanish, French, etc.)
 - **[verse-status](docs/commands/verse-status.md)** - Check status, completion, and validate text against canonical source
 - **[verse-sync](docs/commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
-- **[verse-fetch-text](docs/commands/verse-fetch-text.md)** - Fetch traditional Devanagari text from authoritative sources
 - **[verse-images](docs/commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](docs/commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](docs/commands/verse-embeddings.md)** - Generate vector embeddings for semantic search ([multi-collection guide](docs/multi-collection.md))

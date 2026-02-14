@@ -204,7 +204,9 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 
 ## See Also
 
-- [verse-fetch-text](verse-fetch-text.md) - Fetch traditional verse text from authoritative sources
+- [verse-translate](verse-translate.md) - Translate verses into multiple languages
+- [verse-status](verse-status.md) - Check status and validate text
+- [verse-sync](verse-sync.md) - Sync verse text with canonical source
 - [verse-images](verse-images.md) - Image generation details
 - [verse-audio](verse-audio.md) - Audio generation details
 - [verse-embeddings](verse-embeddings.md) - Vector embeddings for semantic search

@@ -245,11 +245,6 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
 ### Individual Commands
 
-**Fetch text only:**
-```bash
-verse-fetch-text --collection sundar-kaand --verse chaupai_01
-```
-
 **Generate images:**
 ```bash
 verse-images --collection hanuman-chalisa --theme modern-minimalist --verse verse_01

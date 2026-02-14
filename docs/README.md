@@ -5,8 +5,9 @@ Detailed documentation for the sanatan-sdk commands and features.
 ## Command Reference
 
 - **[verse-generate](commands/verse-generate.md)** - Complete orchestrator for verse content (text fetching, multimedia generation, embeddings)
+- **[verse-translate](commands/verse-translate.md)** - Translate verses into multiple languages (Hindi, Spanish, French, etc.)
 - **[verse-status](commands/verse-status.md)** - Check status and completion of verse collections
-- **[verse-fetch-text](commands/verse-fetch-text.md)** - Fetch traditional Devanagari text from authoritative sources
+- **[verse-sync](commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
 - **[verse-images](commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](commands/verse-embeddings.md)** - Generate vector embeddings for semantic search

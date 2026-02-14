@@ -341,7 +341,7 @@ verse-sync --collection sundar-kaand \
 ## Related Commands
 
 - [`verse-status`](verse-status.md) - Check status and validate text
-- [`verse-fetch-text`](verse-fetch-text.md) - Fetch text from sources
+- [`verse-translate`](verse-translate.md) - Translate verses into multiple languages
 - [`verse-generate`](verse-generate.md) - Generate verse content
 
 ## See Also

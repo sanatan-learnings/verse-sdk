@@ -55,7 +55,9 @@ cp /path/to/sanatan-sdk/.env.example .env
 ```bash
 # Check all commands are available
 verse-generate --help
-verse-fetch-text --help
+verse-translate --help
+verse-status --help
+verse-sync --help
 verse-images --help
 verse-audio --help
 verse-embeddings --help
@@ -198,11 +200,6 @@ python scripts/test_multi_collection.py
 ```
 
 ### Testing Individual Components
-
-**Test text fetching:**
-```bash
-verse-fetch-text --collection sundar-kaand --verse chaupai_01
-```
 
 **Test image generation:**
 ```bash
