@@ -5,7 +5,7 @@ Complete toolkit for generating rich multimedia content for spiritual text colle
 ## Features
 
 - **🔄 Complete Workflow**: Fetch text, generate media, and update embeddings - all in one command
-- **📖 Text Fetching**: Scrape traditional Devanagari text from authoritative sources
+- **📖 Text Sources**: Read from local YAML files or fetch from authoritative online sources
 - **🎨 AI Images**: Generate themed images with DALL-E 3
 - **🎵 Audio Pronunciation**: Full and slow-speed audio with ElevenLabs
 - **🔍 Semantic Search**: Vector embeddings for intelligent verse discovery
@@ -37,14 +37,18 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 ```
 
 By default, the complete workflow includes:
-- 🔍 Fetch traditional Devanagari text from authoritative sources
+- 🔍 Fetch traditional Devanagari text (from local YAML files or web sources)
 - 🎨 DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
 - 🎵 Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
 - 🎵 Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
 - 🔗 Update vector embeddings for semantic search
 
+**Text Sources** (checked in order):
+1. Local YAML file: `data/verses/{collection}.yaml` (recommended)
+2. Web scraping from authoritative sources (fallback)
+
 Opt-out flags (to skip specific steps):
-- `--no-fetch-text` - Skip fetching text from authoritative sources
+- `--no-fetch-text` - Skip fetching text (use when verse text already exists)
 - `--no-update-embeddings` - Skip updating embeddings
 
 ## Installation
@@ -77,6 +81,7 @@ See the [Usage Guide](docs/usage.md) for detailed information on project structu
 ## Documentation
 
 - **[Usage Guide](docs/usage.md)** - Project setup, workflows, batch processing, and best practices
+- **[Local Verses Guide](docs/local-verses.md)** - Using local YAML files for verse text
 - **[Command Reference](docs/README.md)** - Detailed documentation for all commands
 - **[Development Guide](docs/development.md)** - Setup and contributing to verse-sdk
 - **[Troubleshooting](docs/troubleshooting.md)** - Common issues and solutions

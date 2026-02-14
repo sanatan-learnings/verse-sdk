@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 """
-Fetch traditional Devanagari verse text from authoritative online sources.
+Fetch traditional Devanagari verse text from local files or authoritative online sources.
 
-This script scrapes verse text from reputable sources of Ramcharitmanas
-and other sacred texts to ensure accuracy and authenticity.
+This script first checks for local YAML files in data/verses/{collection}.yaml,
+then falls back to scraping verse text from reputable online sources if needed.
 """
 
 import sys
 import re
 import json
 import argparse
+import yaml
+from pathlib import Path
 from typing import Optional, Dict
 
 try:
@@ -138,9 +140,61 @@ def fetch_from_generic_source(url: str, selectors: list) -> Optional[str]:
         return None
 
 
+def fetch_from_local_file(collection: str, verse_id: str, project_dir: Path = None) -> Optional[Dict]:
+    """
+    Fetch verse text from local YAML file in data/verses/{collection}.yaml
+
+    Args:
+        collection: Collection key (e.g., "sundar-kaand")
+        verse_id: Verse identifier (e.g., "chaupai_05", "verse_10", "doha_01")
+        project_dir: Project directory (defaults to current working directory)
+
+    Returns:
+        Dictionary with verse data or None if not found
+    """
+    if project_dir is None:
+        project_dir = Path.cwd()
+
+    # Look for local verses file
+    verses_file = project_dir / "data" / "verses" / f"{collection}.yaml"
+
+    if not verses_file.exists():
+        return None
+
+    try:
+        with open(verses_file, 'r', encoding='utf-8') as f:
+            verses_data = yaml.safe_load(f)
+
+        if not verses_data:
+            return None
+
+        # Ignore metadata keys (starting with underscore)
+        if verse_id.startswith('_'):
+            return None
+
+        if verse_id not in verses_data:
+            return None
+
+        verse_data = verses_data[verse_id]
+
+        # Validate required field
+        if 'devanagari' not in verse_data:
+            print(f"Warning: Verse {verse_id} in {verses_file} missing 'devanagari' field", file=sys.stderr)
+            return None
+
+        return verse_data
+
+    except Exception as e:
+        print(f"Error reading local verses file {verses_file}: {e}", file=sys.stderr)
+        return None
+
+
 def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
     """
     Fetch traditional Devanagari text for a verse.
+
+    First checks for local YAML file in data/verses/{collection}.yaml,
+    then falls back to fetching from authoritative online sources.
 
     Args:
         collection: Collection key (e.g., "sundar-kaand")
@@ -162,7 +216,26 @@ def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
 
     print(f"Fetching {verse_type} {verse_num} from {collection}...", file=sys.stderr)
 
-    # Try primary source
+    # Step 1: Try local file first
+    local_data = fetch_from_local_file(collection, verse_id)
+    if local_data:
+        print(f"✓ Found in local file: data/verses/{collection}.yaml", file=sys.stderr)
+        return {
+            "success": True,
+            "collection": collection,
+            "verse_id": verse_id,
+            "verse_type": verse_type,
+            "verse_number": verse_num,
+            "devanagari": local_data.get("devanagari"),
+            "transliteration": local_data.get("transliteration"),
+            "meaning": local_data.get("meaning"),
+            "translation": local_data.get("translation"),
+            "source": "local_file",
+            "verified": True
+        }
+
+    # Step 2: Fall back to internet sources
+    print(f"✓ Local file not found, fetching from internet...", file=sys.stderr)
     text = fetch_from_ramcharitmanas_net(collection, verse_num, verse_type)
 
     if text:
@@ -182,7 +255,7 @@ def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
         "error": f"Could not fetch verse text from any source",
         "collection": collection,
         "verse_id": verse_id,
-        "tried_sources": ["ramcharitmanas.net"]
+        "tried_sources": ["local_file", "ramcharitmanas.net"]
     }
 
 
