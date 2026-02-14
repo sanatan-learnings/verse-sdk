@@ -58,16 +58,17 @@ except ImportError:
 load_dotenv()
 
 
-def generate_verse_content(devanagari_text: str, collection: str) -> dict:
+def generate_verse_content(devanagari_text: str, collection: str, verse_id: str = None) -> dict:
     """
     Generate AI content (transliteration, meaning, translation, story) from Devanagari text.
 
     Args:
         devanagari_text: The canonical Devanagari verse text
         collection: Collection key for context
+        verse_id: Verse identifier (e.g., chaupai_02, shloka_01)
 
     Returns:
-        Dictionary with generated content fields
+        Dictionary with generated content fields in complete chaupai format
     """
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -79,23 +80,44 @@ def generate_verse_content(devanagari_text: str, collection: str) -> dict:
     prompt = f"""You are an expert in Sanskrit/Hindi spiritual texts. Given this verse from {collection}:
 
 Devanagari: {devanagari_text}
+Verse ID: {verse_id or 'unknown'}
 
-Please provide:
+Please provide complete verse analysis in the following format:
 
-1. TRANSLITERATION (IAST format, precisely matching the Devanagari):
+1. VERSE TITLE (short, descriptive - 3-6 words capturing the essence):
+English: [Title in English]
+Hindi: [शीर्षक हिंदी में]
+
+2. TRANSLITERATION (IAST format, single line, precisely matching the Devanagari):
 [Your transliteration here]
 
-2. WORD-BY-WORD MEANING:
-[Detailed breakdown of each word/phrase in the verse]
+3. WORD-BY-WORD MEANINGS (structured list of key words):
+For each important word, provide:
+- Word (Devanagari)
+- Romanization
+- Meaning in English
+- Meaning in Hindi
 
-3. ENGLISH TRANSLATION (natural, flowing translation):
-[Your translation here]
+4. WORD-BY-WORD BREAKDOWN (plain text explanation):
+[Simple word-by-word meaning explanation]
 
-4. STORY & CONTEXT (2-3 paragraphs explaining the context, significance, and deeper meaning):
-[Your story/explanation here]
+5. LITERAL TRANSLATION:
+English: [Direct, literal translation]
+Hindi: [शाब्दिक अनुवाद]
 
-5. PRACTICAL APPLICATIONS (2-3 practical ways to apply this verse's teachings in daily life):
-[Your practical applications here]
+6. INTERPRETIVE MEANING (deeper spiritual/contextual explanation):
+English: [2-3 sentences explaining the deeper meaning]
+Hindi: [गहरा अर्थ 2-3 वाक्य]
+
+7. STORY & CONTEXT:
+English: [2-3 paragraphs explaining context, significance, and narrative]
+Hindi: [संदर्भ और कथा 2-3 पैराग्राफ]
+
+8. PRACTICAL APPLICATION:
+Teaching (English): [Core teaching in 1-2 sentences]
+Teaching (Hindi): [मुख्य शिक्षा 1-2 वाक्य]
+When to Use (English): [When to recite/apply this verse]
+When to Use (Hindi): [कब उपयोग करें]
 
 Format your response exactly as above with clear section headers."""
 
@@ -112,54 +134,117 @@ Format your response exactly as above with clear section headers."""
 
         content = response.choices[0].message.content
 
-        # Parse the response into structured fields
+        # Parse the response into structured fields (complete chaupai format)
         result = {
             "devanagari": devanagari_text,
             "transliteration": "",
+            "title_en": "",
+            "title_hi": "",
+            "word_meanings": [],
             "meaning": "",
-            "translation": {"en": ""},
-            "story": "",
-            "practical_applications": ""
+            "literal_translation": {"en": "", "hi": ""},
+            "interpretive_meaning": {"en": "", "hi": ""},
+            "story": {"en": "", "hi": ""},
+            "practical_application": {
+                "teaching": {"en": "", "hi": ""},
+                "when_to_use": {"en": "", "hi": ""}
+            },
+            "translation": {"en": ""}  # For backward compatibility
         }
 
-        # Simple parsing - split by section headers
-        sections = content.split("\n\n")
+        # Parse sections
+        lines = content.split("\n")
         current_section = None
+        current_lang = None
 
-        for section in sections:
-            section = section.strip()
-            if not section:
+        for line in lines:
+            line_stripped = line.strip()
+            if not line_stripped:
                 continue
 
-            if "TRANSLITERATION" in section.upper():
+            # Section headers
+            if "VERSE TITLE" in line.upper() or "1." in line:
+                current_section = "title"
+            elif "TRANSLITERATION" in line.upper() or "2." in line:
                 current_section = "transliteration"
-                # Get text after the header
-                lines = section.split("\n")[1:]
-                result["transliteration"] = "\n".join(lines).strip()
-            elif "WORD-BY-WORD" in section.upper() or "MEANING" in section.upper():
+            elif "WORD-BY-WORD MEANINGS" in line.upper() or "3." in line:
+                current_section = "word_meanings"
+            elif "WORD-BY-WORD BREAKDOWN" in line.upper() or "4." in line:
                 current_section = "meaning"
-                lines = section.split("\n")[1:]
-                result["meaning"] = "\n".join(lines).strip()
-            elif "TRANSLATION" in section.upper():
-                current_section = "translation"
-                lines = section.split("\n")[1:]
-                result["translation"]["en"] = "\n".join(lines).strip()
-            elif "STORY" in section.upper() or "CONTEXT" in section.upper():
+            elif "LITERAL TRANSLATION" in line.upper() or "5." in line:
+                current_section = "literal_translation"
+            elif "INTERPRETIVE MEANING" in line.upper() or "6." in line:
+                current_section = "interpretive_meaning"
+            elif "STORY" in line.upper() or "7." in line:
                 current_section = "story"
-                lines = section.split("\n")[1:]
-                result["story"] = "\n".join(lines).strip()
-            elif "PRACTICAL" in section.upper() or "APPLICATIONS" in section.upper():
-                current_section = "practical_applications"
-                lines = section.split("\n")[1:]
-                result["practical_applications"] = "\n".join(lines).strip()
-            elif current_section and not any(keyword in section.upper() for keyword in ["1.", "2.", "3.", "4.", "5."]):
-                # Continue current section
-                if current_section == "translation":
-                    result["translation"]["en"] += "\n" + section
-                else:
-                    result[current_section] += "\n" + section
+            elif "PRACTICAL APPLICATION" in line.upper() or "8." in line:
+                current_section = "practical_application"
+            # Language indicators
+            elif line_stripped.startswith("English:"):
+                current_lang = "en"
+                text = line_stripped[8:].strip()
+                if current_section == "title" and text:
+                    result["title_en"] = text
+                elif current_section == "literal_translation" and text:
+                    result["literal_translation"]["en"] = text
+                elif current_section == "interpretive_meaning" and text:
+                    result["interpretive_meaning"]["en"] = text
+                elif current_section == "story" and text:
+                    result["story"]["en"] = text
+            elif line_stripped.startswith("Hindi:") or line_stripped.startswith("हिंदी:"):
+                current_lang = "hi"
+                text = line_stripped.split(":", 1)[1].strip()
+                if current_section == "title" and text:
+                    result["title_hi"] = text
+                elif current_section == "literal_translation" and text:
+                    result["literal_translation"]["hi"] = text
+                elif current_section == "interpretive_meaning" and text:
+                    result["interpretive_meaning"]["hi"] = text
+                elif current_section == "story" and text:
+                    result["story"]["hi"] = text
+            elif "Teaching" in line and "English" in line:
+                text = line.split(":", 1)[1].strip() if ":" in line else ""
+                result["practical_application"]["teaching"]["en"] = text
+            elif "Teaching" in line and ("Hindi" in line or "हिंदी" in line):
+                text = line.split(":", 1)[1].strip() if ":" in line else ""
+                result["practical_application"]["teaching"]["hi"] = text
+            elif "When to Use" in line and "English" in line:
+                text = line.split(":", 1)[1].strip() if ":" in line else ""
+                result["practical_application"]["when_to_use"]["en"] = text
+            elif "When to Use" in line and ("Hindi" in line or "कब" in line):
+                text = line.split(":", 1)[1].strip() if ":" in line else ""
+                result["practical_application"]["when_to_use"]["hi"] = text
+            # Content lines
+            elif current_section == "transliteration" and line_stripped and not any(x in line.upper() for x in ["TRANSLITERATION", "2."]):
+                result["transliteration"] = line_stripped
+            elif current_section == "meaning" and line_stripped and not any(x in line.upper() for x in ["BREAKDOWN", "4."]):
+                result["meaning"] += line_stripped + " "
+            elif current_section == "literal_translation" and current_lang == "en" and not "English:" in line:
+                result["literal_translation"]["en"] += " " + line_stripped
+            elif current_section == "literal_translation" and current_lang == "hi" and not "Hindi:" in line:
+                result["literal_translation"]["hi"] += " " + line_stripped
+            elif current_section == "interpretive_meaning" and current_lang == "en" and not "English:" in line:
+                result["interpretive_meaning"]["en"] += " " + line_stripped
+            elif current_section == "interpretive_meaning" and current_lang == "hi" and not "Hindi:" in line:
+                result["interpretive_meaning"]["hi"] += " " + line_stripped
+            elif current_section == "story" and current_lang == "en" and not "English:" in line:
+                result["story"]["en"] += " " + line_stripped
+            elif current_section == "story" and current_lang == "hi" and not "Hindi:" in line:
+                result["story"]["hi"] += " " + line_stripped
 
-        print(f"  ✓ Generated transliteration, meaning, translation, story, and practical applications", file=sys.stderr)
+        # Clean up whitespace
+        result["meaning"] = result["meaning"].strip()
+        result["literal_translation"]["en"] = result["literal_translation"]["en"].strip()
+        result["literal_translation"]["hi"] = result["literal_translation"]["hi"].strip()
+        result["interpretive_meaning"]["en"] = result["interpretive_meaning"]["en"].strip()
+        result["interpretive_meaning"]["hi"] = result["interpretive_meaning"]["hi"].strip()
+        result["story"]["en"] = result["story"]["en"].strip()
+        result["story"]["hi"] = result["story"]["hi"].strip()
+
+        # Set translation.en for backward compatibility (use literal or interpretive)
+        result["translation"]["en"] = result["literal_translation"]["en"] or result["interpretive_meaning"]["en"]
+
+        print(f"  ✓ Generated complete verse content with titles, translations, story, and practical applications", file=sys.stderr)
         return result
 
     except Exception as e:
@@ -167,15 +252,16 @@ Format your response exactly as above with clear section headers."""
         sys.exit(1)
 
 
-def create_verse_file_with_content(verse_file: Path, content: dict, collection: str, verse_num: int) -> bool:
+def create_verse_file_with_content(verse_file: Path, content: dict, collection: str, verse_num: int, verse_id: str = None) -> bool:
     """
-    Create a new verse markdown file with generated content.
+    Create a new verse markdown file with generated content in complete chaupai format.
 
     Args:
         verse_file: Path to the verse markdown file to create
         content: Dictionary with generated content fields
         collection: Collection key
         verse_num: Verse number
+        verse_id: Verse identifier (e.g., chaupai_02, shloka_01)
 
     Returns:
         True if successful, False otherwise
@@ -184,26 +270,52 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
         # Ensure parent directory exists
         verse_file.parent.mkdir(parents=True, exist_ok=True)
 
-        # Build frontmatter
+        # Extract verse_id from filename if not provided
+        if not verse_id:
+            verse_id = verse_file.stem  # e.g., chaupai_02 from chaupai_02.md
+
+        # Determine verse type and format IDs
+        verse_type = verse_id.split('_')[0] if '_' in verse_id else 'verse'  # chaupai, shloka, doha, etc.
+
+        # Build complete frontmatter (chaupai format)
         frontmatter = {
+            'layout': 'verse',
+            'collection_key': collection,
+            'permalink': f'/{collection}/{verse_id}/',
+            'title_en': content.get('title_en', f'{verse_type.title()} {verse_num}'),
+            'title_hi': content.get('title_hi', f'{verse_type} {verse_num}'),
             'verse_number': verse_num,
-            'collection': collection,
+            'previous_verse': f'/{collection}/{verse_type}_{verse_num-1:02d}' if verse_num > 1 else None,
+            'next_verse': f'/{collection}/{verse_type}_{verse_num+1:02d}',
+            'image': f'/images/{collection}/modern-minimalist/{verse_id}.png',
             'devanagari': content['devanagari'],
             'transliteration': content['transliteration'],
-            'meaning': content['meaning'],
-            'translation': content['translation']
+            'word_meanings': content.get('word_meanings', []),
+            'literal_translation': content.get('literal_translation', {'en': '', 'hi': ''}),
+            'interpretive_meaning': content.get('interpretive_meaning', {'en': '', 'hi': ''}),
+            'story': content.get('story', {'en': '', 'hi': ''}),
+            'practical_application': content.get('practical_application', {
+                'teaching': {'en': '', 'hi': ''},
+                'when_to_use': {'en': '', 'hi': ''}
+            }),
+            'meaning': content.get('meaning', ''),
+            'translation': content.get('translation', {'en': ''})
         }
+
+        # Remove None values
+        frontmatter = {k: v for k, v in frontmatter.items() if v is not None}
 
         # Build file content
         file_content = "---\n"
-        file_content += yaml.dump(frontmatter, allow_unicode=True, sort_keys=False)
+        file_content += yaml.dump(frontmatter, allow_unicode=True, sort_keys=False, default_flow_style=False)
         file_content += "---\n"
 
-        # Add body sections
-        if content.get('story'):
+        # Add body sections (minimal, most content is in frontmatter)
+        # Only add if story/practical_application are strings (legacy format)
+        if isinstance(content.get('story'), str) and content.get('story'):
             file_content += f"\n## Story & Context\n\n{content['story']}\n"
 
-        if content.get('practical_applications'):
+        if isinstance(content.get('practical_applications'), str) and content.get('practical_applications'):
             file_content += f"\n## Practical Applications\n\n{content['practical_applications']}\n"
 
         # Write file
@@ -215,6 +327,8 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
 
     except Exception as e:
         print(f"  ✗ Error creating verse file: {e}", file=sys.stderr)
+        import traceback
+        traceback.print_exc()
         return False
 
 
@@ -1001,7 +1115,8 @@ Environment Variables:
                     # Generate content from canonical text
                     generated_content = generate_verse_content(
                         canonical_data['devanagari'],
-                        args.collection
+                        args.collection,
+                        verse_id
                     )
 
                     # Create verse markdown file
@@ -1009,7 +1124,8 @@ Environment Variables:
                         verse_file,
                         generated_content,
                         args.collection,
-                        verse_num
+                        verse_num,
+                        verse_id
                     )
 
                     if results['verse_file_created']:
@@ -1032,7 +1148,8 @@ Environment Variables:
                     # Generate content from canonical text
                     generated_content = generate_verse_content(
                         canonical_data['devanagari'],
-                        args.collection
+                        args.collection,
+                        verse_id
                     )
 
                     # Update verse markdown file
