@@ -167,6 +167,57 @@ Format your response exactly as above with clear section headers."""
         sys.exit(1)
 
 
+def create_verse_file_with_content(verse_file: Path, content: dict, collection: str, verse_num: int) -> bool:
+    """
+    Create a new verse markdown file with generated content.
+
+    Args:
+        verse_file: Path to the verse markdown file to create
+        content: Dictionary with generated content fields
+        collection: Collection key
+        verse_num: Verse number
+
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        # Ensure parent directory exists
+        verse_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Build frontmatter
+        frontmatter = {
+            'verse_number': verse_num,
+            'collection': collection,
+            'devanagari': content['devanagari'],
+            'transliteration': content['transliteration'],
+            'meaning': content['meaning'],
+            'translation': content['translation']
+        }
+
+        # Build file content
+        file_content = "---\n"
+        file_content += yaml.dump(frontmatter, allow_unicode=True, sort_keys=False)
+        file_content += "---\n"
+
+        # Add body sections
+        if content.get('story'):
+            file_content += f"\n## Story & Context\n\n{content['story']}\n"
+
+        if content.get('practical_applications'):
+            file_content += f"\n## Practical Applications\n\n{content['practical_applications']}\n"
+
+        # Write file
+        with open(verse_file, 'w', encoding='utf-8') as f:
+            f.write(file_content)
+
+        print(f"  ✓ Created verse file: {verse_file.name}", file=sys.stderr)
+        return True
+
+    except Exception as e:
+        print(f"  ✗ Error creating verse file: {e}", file=sys.stderr)
+        return False
+
+
 def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
     """
     Update verse markdown file with generated content.
@@ -919,15 +970,54 @@ Environment Variables:
             results = {
                 'verse': verse_num,
                 'verse_id': verse_id,
+                'verse_file_created': None,
                 'regenerate_content': None,
                 'image': None,
                 'audio': None,
                 'embeddings': None
             }
 
+            # Check if verse file exists, create if needed
+            verse_file = Path.cwd() / "_verses" / args.collection / f"{verse_id}.md"
+            verse_file_existed = verse_file.exists()
+
+            # Step 0: Create verse file if it doesn't exist (required for audio generation)
+            if not verse_file_existed:
+                print(f"\n{'='*60}")
+                print("CREATING VERSE FILE")
+                print(f"{'='*60}\n")
+                print(f"  → Verse file not found, creating from canonical source...")
+
+                from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
+
+                canonical_data = fetch_from_local_file(args.collection, verse_id)
+                if not canonical_data or not canonical_data.get('devanagari'):
+                    print(f"  ✗ Error: No canonical Devanagari text found for {verse_id}", file=sys.stderr)
+                    print(f"  Please create data/verses/{args.collection}.yaml with canonical text", file=sys.stderr)
+                    results['verse_file_created'] = False
+                else:
+                    # Generate content from canonical text
+                    generated_content = generate_verse_content(
+                        canonical_data['devanagari'],
+                        args.collection
+                    )
+
+                    # Create verse markdown file
+                    results['verse_file_created'] = create_verse_file_with_content(
+                        verse_file,
+                        generated_content,
+                        args.collection,
+                        verse_num
+                    )
+
+                    if results['verse_file_created']:
+                        print(f"  ✓ Verse file created successfully")
+                    else:
+                        print(f"  ✗ Failed to create verse file")
+
             # Generate content in order: regenerate content → image → audio → embeddings
-            # Step 1: Regenerate AI content (optional)
-            if regenerate_content_flag:
+            # Step 1: Regenerate AI content (optional, only for existing files)
+            if regenerate_content_flag and verse_file_existed:
                 # Load canonical Devanagari from data/verses/{collection}.yaml
                 from verse_sdk.fetch.fetch_verse_text import fetch_from_local_file
 
@@ -1010,6 +1100,10 @@ Environment Variables:
         # Single verse summary
         results = overall_results[0]
 
+        if results['verse_file_created'] is not None:
+            status = "✓" if results['verse_file_created'] else "✗"
+            print(f"{status} Verse file creation: {'Success' if results['verse_file_created'] else 'Failed'}")
+
         if regenerate_content_flag:
             status = "✓" if results['regenerate_content'] else "✗"
             print(f"{status} Regenerate content: {'Success' if results['regenerate_content'] else 'Failed'}")
@@ -1055,6 +1149,8 @@ Environment Variables:
 
             # Check if all operations succeeded
             ops = []
+            if result['verse_file_created'] is not None:
+                ops.append(result['verse_file_created'])
             if regenerate_content_flag and result['regenerate_content'] is not None:
                 ops.append(result['regenerate_content'])
             if generate_image_flag and result['image'] is not None:
@@ -1066,6 +1162,8 @@ Environment Variables:
                 success_count += 1
             else:
                 failed_ops = []
+                if result['verse_file_created'] is False:
+                    failed_ops.append("verse file")
                 if regenerate_content_flag and not result['regenerate_content']:
                     failed_ops.append("content")
                 if generate_image_flag and not result['image']:
