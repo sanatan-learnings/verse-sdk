@@ -200,10 +200,11 @@ MIT License - See [LICENSE](LICENSE) file for details
 
 ## Contributing
 
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request
+Contributions welcome! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
+- Development setup
+- Coding standards
+- Submitting pull requests
+- Community guidelines
 
 ## Support
 
