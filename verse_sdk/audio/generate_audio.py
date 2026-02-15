@@ -136,20 +136,52 @@ class AudioGenerator:
 
             front_matter = parts[1]
 
-            # Extract devanagari text
-            devanagari_match = re.search(
-                r'devanagari:\s*\|\s*(.*?)(?=\n\w+:|---|\Z)',
+            # Extract devanagari text - support multiple YAML formats:
+            # 1. devanagari: 'text' (quoted string, possibly multi-line)
+            # 2. devanagari: text (plain string)
+            # 3. devanagari: | text (YAML literal block)
+            devanagari = None
+
+            # Try YAML literal block format first (devanagari: |)
+            match = re.search(
+                r'devanagari:\s*\|\s*\n(.*?)(?=\n\w+:|---|\Z)',
                 front_matter,
                 re.DOTALL
             )
+            if match:
+                devanagari = match.group(1).strip()
+            else:
+                # Try quoted string format (devanagari: 'text' or devanagari: "text")
+                match = re.search(
+                    r'devanagari:\s*[\'\"](.*?)[\'\"]',
+                    front_matter,
+                    re.DOTALL
+                )
+                if match:
+                    devanagari = match.group(1).strip()
+                else:
+                    # Try plain string format (devanagari: text)
+                    match = re.search(
+                        r'devanagari:\s*([^\n]+?)(?:\n|$)',
+                        front_matter
+                    )
+                    if match:
+                        devanagari = match.group(1).strip()
 
-            if devanagari_match:
-                devanagari = devanagari_match.group(1).strip()
+            if devanagari:
 
                 # Determine base filename (doha_01, verse_01, etc.)
                 base_name = verse_file.stem
 
                 verses[base_name] = devanagari
+            else:
+                # No devanagari field found - warn user
+                print(f"  ⚠ Warning: No 'devanagari' field found in {verse_file.name}")
+                print(f"    Expected one of these formats in frontmatter:")
+                print(f"      devanagari: text")
+                print(f"      devanagari: 'text'")
+                print(f"      devanagari: |")
+                print(f"        text")
 
         print(f"✓ Parsed {len(verses)} verses from {self.verses_dir}")
         return verses

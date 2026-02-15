@@ -739,7 +739,24 @@ def generate_audio(collection: str, verse: int, verse_id: str = None) -> bool:
 
     try:
         result = subprocess.run(cmd, check=True)
+
+        # Verify that audio files were actually created
+        audio_dir = Path.cwd() / "audio" / collection
+        full_audio = audio_dir / f"{verse_id}_full.mp3"
+        slow_audio = audio_dir / f"{verse_id}_slow.mp3"
+
+        if not full_audio.exists() or not slow_audio.exists():
+            print(f"\n✗ Audio generation reported success but files not found:")
+            if not full_audio.exists():
+                print(f"  Missing: {full_audio}")
+            if not slow_audio.exists():
+                print(f"  Missing: {slow_audio}")
+            print("\nThis may indicate an issue with the audio generation workflow.")
+            return False
+
         print(f"\n✓ Audio generated successfully")
+        print(f"  ✓ {full_audio.name}")
+        print(f"  ✓ {slow_audio.name}")
         return True
     except subprocess.CalledProcessError as e:
         print(f"\n✗ Error generating audio: {e}")
