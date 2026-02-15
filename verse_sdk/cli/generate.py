@@ -1419,7 +1419,7 @@ Environment Variables:
                         verse_file,
                         generated_content,
                         args.collection,
-                        verse_num,
+                        verse_position,
                         verse_id
                     )
 
@@ -1485,21 +1485,21 @@ Environment Variables:
                     # Ensure scene description exists (creates file/adds description if needed)
                     scene_ready = ensure_scene_description_exists(
                         args.collection,
-                        verse_num,
+                        verse_position,
                         verse_id,
                         canonical_data['devanagari'],
                         title_en
                     )
 
                     if scene_ready:
-                        results['image'] = generate_image(args.collection, verse_num, args.theme, verse_id)
+                        results['image'] = generate_image(args.collection, verse_position, args.theme, verse_id)
                     else:
                         print(f"  ✗ Failed to prepare scene description", file=sys.stderr)
                         results['image'] = False
 
             # Step 3: Generate audio
             if generate_audio_flag:
-                results['audio'] = generate_audio(args.collection, verse_num, verse_id)
+                results['audio'] = generate_audio(args.collection, verse_position, verse_id)
 
             # Step 4: Update embeddings (only once at the end for batch)
             if update_embeddings_flag:
