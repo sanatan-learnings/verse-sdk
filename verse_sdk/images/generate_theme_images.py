@@ -110,17 +110,41 @@ class ImageGenerator:
             prompts['title-page.png'] = title_match.group(1).strip()
 
         # Extract opening doha scene descriptions
-        doha_sections = re.findall(
-            r'### Opening Doha (\d+):.*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
+        # Try with verse IDs in parentheses first
+        doha_with_id_sections = re.findall(
+            r'###\s+Opening Doha\s+\d+\s+\(([^)]+)\).*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
             content,
             re.DOTALL
         )
-        for doha_num, scene_desc in doha_sections:
-            filename = f'opening-doha-{doha_num.zfill(2)}.png'
-            prompts[filename] = scene_desc.strip()
+        if doha_with_id_sections:
+            for verse_id, scene_desc in doha_with_id_sections:
+                filename = f'{verse_id.replace("_", "-")}.png'
+                prompts[filename] = scene_desc.strip()
+        else:
+            # Fall back to numbered format
+            doha_sections = re.findall(
+                r'### Opening Doha (\d+):.*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
+                content,
+                re.DOTALL
+            )
+            for doha_num, scene_desc in doha_sections:
+                filename = f'opening-doha-{doha_num.zfill(2)}.png'
+                prompts[filename] = scene_desc.strip()
 
-        # Extract verse scene descriptions
-        # Try Chapter X, Verse Y format first (for Bhagavad Gita)
+        # Extract verse scene descriptions with verse IDs
+        # First try to extract verses with IDs in parentheses (e.g., "Shloka 1 (shloka_01)", "Chaupai 2 (chaupai_02)")
+        verse_with_id_sections = re.findall(
+            r'###\s+(?:Shloka|Chaupai|Doha|Verse)\s+\d+\s+\(([^)]+)\).*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
+            content,
+            re.DOTALL
+        )
+        if verse_with_id_sections:
+            for verse_id, scene_desc in verse_with_id_sections:
+                # Use the verse ID from parentheses, convert underscores to dashes
+                filename = f'{verse_id.replace("_", "-")}.png'
+                prompts[filename] = scene_desc.strip()
+
+        # Try Chapter X, Verse Y format (for Bhagavad Gita)
         chapter_verse_sections = re.findall(
             r'### Chapter (\d+),\s*Verse (\d+).*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
             content,
@@ -130,8 +154,9 @@ class ImageGenerator:
             for chapter_num, verse_num, scene_desc in chapter_verse_sections:
                 filename = f'chapter-{chapter_num.zfill(2)}-verse-{verse_num.zfill(2)}.png'
                 prompts[filename] = scene_desc.strip()
-        else:
-            # Fall back to simple Verse X format (for Hanuman Chalisa)
+
+        # Fall back to simple Verse X format (for Hanuman Chalisa without IDs)
+        if not verse_with_id_sections and not chapter_verse_sections:
             verse_sections = re.findall(
                 r'### Verse (\d+):.*?\*\*Scene Description\*\*:\s*(.*?)(?=\n---|\n###|\Z)',
                 content,
@@ -235,46 +260,66 @@ class ImageGenerator:
 
         return False
 
-    def generate_all_images(self, start_from: Optional[str] = None) -> None:
+    def generate_all_images(self, start_from: Optional[str] = None, specific_verse: Optional[str] = None) -> None:
         """
         Generate all images for the theme.
 
         Args:
             start_from: Optional filename to start from (useful for resuming)
+            specific_verse: Optional verse ID to generate only (e.g., 'shloka_01', 'chaupai_03')
         """
         prompts = self.parse_prompts_file()
 
-        # Detect format: check if we have chapter-verse format or simple verse format
-        has_chapters = any('chapter-' in f for f in prompts.keys())
-
-        if has_chapters:
-            # Bhagavad Gita format: sort by chapter and verse
-            # Extract all chapter-verse combinations from prompts and sort them
-            ordered_files = sorted(
-                [f for f in prompts.keys() if f.startswith('chapter-')],
-                key=lambda x: (
-                    int(re.search(r'chapter-(\d+)', x).group(1)),
-                    int(re.search(r'verse-(\d+)', x).group(1))
-                )
-            )
+        # Filter to specific verse if requested
+        if specific_verse:
+            # Convert verse_id format to filename format (shloka_01 -> shloka-01.png)
+            target_filename = f"{specific_verse.replace('_', '-')}.png"
+            if target_filename in prompts:
+                ordered_files = [target_filename]
+                print(f"✓ Generating specific verse: {specific_verse} ({target_filename})")
+            else:
+                print(f"✗ Error: Verse '{specific_verse}' not found in prompts file")
+                print(f"   Looking for: {target_filename}")
+                print(f"   Available verses: {', '.join(sorted(prompts.keys())[:10])}...")
+                sys.exit(1)
         else:
-            # Hanuman Chalisa format: original sorting logic
-            ordered_files = ['title-page.png']
-            ordered_files += [f'opening-doha-{i:02d}.png' for i in range(1, 3)]
-            ordered_files += [f'verse-{i:02d}.png' for i in range(1, 41)]
-            ordered_files += ['closing-doha.png']
+            # Detect format: check if we have chapter-verse format or simple verse format
+            has_chapters = any('chapter-' in f for f in prompts.keys())
 
-            # Filter to only include files with prompts
-            ordered_files = [f for f in ordered_files if f in prompts]
+            if has_chapters:
+                # Bhagavad Gita format: sort by chapter and verse
+                # Extract all chapter-verse combinations from prompts and sort them
+                ordered_files = sorted(
+                    [f for f in prompts.keys() if f.startswith('chapter-')],
+                    key=lambda x: (
+                        int(re.search(r'chapter-(\d+)', x).group(1)),
+                        int(re.search(r'verse-(\d+)', x).group(1))
+                    )
+                )
+            else:
+                # Use natural sorting for new format (shloka-01, chaupai-01, etc.)
+                # Sort all files naturally, keeping special files in order
+                special_files = ['title-page.png', 'closing-doha.png']
+                regular_files = [f for f in prompts.keys() if f not in special_files]
 
-        # Start from specific file if requested
-        if start_from:
-            try:
-                start_idx = ordered_files.index(start_from)
-                ordered_files = ordered_files[start_idx:]
-                print(f"✓ Resuming from {start_from}")
-            except ValueError:
-                print(f"⚠ Warning: {start_from} not found, starting from beginning")
+                # Sort alphabetically (works well for our naming: chaupai-01, shloka-01, etc.)
+                regular_files = sorted(regular_files)
+
+                ordered_files = []
+                if 'title-page.png' in prompts:
+                    ordered_files.append('title-page.png')
+                ordered_files.extend(regular_files)
+                if 'closing-doha.png' in prompts:
+                    ordered_files.append('closing-doha.png')
+
+            # Start from specific file if requested
+            if start_from:
+                try:
+                    start_idx = ordered_files.index(start_from)
+                    ordered_files = ordered_files[start_idx:]
+                    print(f"✓ Resuming from {start_from}")
+                except ValueError:
+                    print(f"⚠ Warning: {start_from} not found, starting from beginning")
 
         print(f"\n{'='*60}")
         print(f"Generating {len(ordered_files)} images for theme: {self.theme}")
@@ -617,7 +662,7 @@ Cost Estimate:
     # Create generator and run
     try:
         generator = ImageGenerator(api_key, args.collection, args.theme, args.style, theme_config)
-        generator.generate_all_images(start_from=args.start_from)
+        generator.generate_all_images(start_from=args.start_from, specific_verse=args.verse)
     except KeyboardInterrupt:
         print("\n\n⚠ Generation interrupted by user")
         print("You can resume by running the script with --start-from flag")
