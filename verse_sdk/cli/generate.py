@@ -92,11 +92,12 @@ Hindi: [शीर्षक हिंदी में]
 [Your transliteration here]
 
 3. WORD-BY-WORD MEANINGS (structured list of key words):
-For each important word, provide:
-- Word (Devanagari)
-- Romanization
-- Meaning in English
-- Meaning in Hindi
+Format each word exactly as:
+WORD: [Devanagari word] | ROMAN: [romanization] | EN: [English meaning] | HI: [Hindi meaning]
+
+Example:
+WORD: तब | ROMAN: Tab | EN: then/until then | HI: तब/तब तक
+WORD: लगि | ROMAN: Lagi | EN: until | HI: तक
 
 4. WORD-BY-WORD BREAKDOWN (plain text explanation):
 [Simple word-by-word meaning explanation]
@@ -217,6 +218,38 @@ Format your response exactly as above with clear section headers."""
             # Content lines
             elif current_section == "transliteration" and line_stripped and not any(x in line.upper() for x in ["TRANSLITERATION", "2."]):
                 result["transliteration"] = line_stripped
+            elif current_section == "word_meanings" and line_stripped and "WORD:" in line_stripped:
+                # Parse word meaning entry: WORD: ... | ROMAN: ... | EN: ... | HI: ...
+                try:
+                    parts = line_stripped.split("|")
+                    if len(parts) >= 4:
+                        word = ""
+                        roman = ""
+                        meaning_en = ""
+                        meaning_hi = ""
+
+                        for part in parts:
+                            part = part.strip()
+                            if part.startswith("WORD:"):
+                                word = part[5:].strip()
+                            elif part.startswith("ROMAN:"):
+                                roman = part[6:].strip()
+                            elif part.startswith("EN:"):
+                                meaning_en = part[3:].strip()
+                            elif part.startswith("HI:"):
+                                meaning_hi = part[3:].strip()
+
+                        if word and roman:
+                            result["word_meanings"].append({
+                                "word": word,
+                                "roman": roman,
+                                "meaning": {
+                                    "en": meaning_en,
+                                    "hi": meaning_hi
+                                }
+                            })
+                except Exception:
+                    pass  # Skip malformed entries
             elif current_section == "meaning" and line_stripped and not any(x in line.upper() for x in ["BREAKDOWN", "4."]):
                 result["meaning"] += line_stripped + " "
             elif current_section == "literal_translation" and current_lang == "en" and not "English:" in line:
