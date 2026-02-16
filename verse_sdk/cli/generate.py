@@ -328,7 +328,7 @@ Format your response exactly as above with clear section headers."""
         sys.exit(1)
 
 
-def create_verse_file_with_content(verse_file: Path, content: dict, collection: str, verse_num: int, verse_id: str = None) -> bool:
+def create_verse_file_with_content(verse_file: Path, content: dict, collection: str, verse_num: int, verse_id: str = None, project_dir: Path = None) -> bool:
     """
     Create a new verse markdown file with generated content in complete chaupai format.
 
@@ -336,8 +336,9 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
         verse_file: Path to the verse markdown file to create
         content: Dictionary with generated content fields
         collection: Collection key
-        verse_num: Verse number
-        verse_id: Verse identifier (e.g., chaupai_02, shloka_01)
+        verse_num: Verse number (for display, not navigation)
+        verse_id: Verse identifier (e.g., chaupai-02, shloka-01)
+        project_dir: Project directory (for reading sequence)
 
     Returns:
         True if successful, False otherwise
@@ -348,22 +349,28 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
 
         # Extract verse_id from filename if not provided
         if not verse_id:
-            verse_id = verse_file.stem  # e.g., chaupai_02 from chaupai_02.md
+            verse_id = verse_file.stem  # e.g., chaupai-02 from chaupai-02.md
 
-        # Determine verse type and format IDs
+        # Determine verse type and extract number from ID
         verse_type = verse_id.split('-')[0] if '-' in verse_id else 'verse'  # chaupai, shloka, doha, etc.
+        id_number = extract_verse_number_from_id(verse_id) or verse_num
+
+        # Get navigation from sequence
+        if project_dir is None:
+            project_dir = verse_file.parent.parent.parent  # Go up from _verses/collection/file.md
+        prev_id, next_id = get_navigation_from_sequence(collection, verse_id, project_dir)
 
         # Build complete frontmatter (chaupai format)
         frontmatter = {
             'layout': 'verse',
             'collection_key': collection,
             'permalink': f'/{collection}/{verse_id}/',
-            'title_en': content.get('title_en', f'{verse_type.title()} {verse_num}'),
-            'title_hi': content.get('title_hi', f'{verse_type} {verse_num}'),
+            'title_en': content.get('title_en', f'{verse_type.title()} {id_number}'),
+            'title_hi': content.get('title_hi', f'{verse_type} {id_number}'),
             'verse_number': verse_num,
             'verse_type': verse_type,
-            'previous_verse': f'/{collection}/{verse_type}-{verse_num-1:02d}' if verse_num > 1 else None,
-            'next_verse': f'/{collection}/{verse_type}-{verse_num+1:02d}',
+            'previous_verse': f'/{collection}/{prev_id}/' if prev_id else None,
+            'next_verse': f'/{collection}/{next_id}/' if next_id else None,
             'image': f'/images/{collection}/modern-minimalist/{verse_id}.png',
             'devanagari': content['devanagari'],
             'transliteration': content['transliteration'],
@@ -446,8 +453,13 @@ def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
         # Get verse info from existing frontmatter or filename
         verse_num = frontmatter.get('verse_number', 0)
         collection = frontmatter.get('collection_key') or frontmatter.get('collection', 'unknown')
-        verse_id = verse_file.stem  # e.g., shloka_02
+        verse_id = verse_file.stem  # e.g., shloka-02
         verse_type = verse_id.split('-')[0] if '-' in verse_id else 'verse'
+        id_number = extract_verse_number_from_id(verse_id) or verse_num
+
+        # Get navigation from sequence
+        project_dir = verse_file.parent.parent.parent  # Go up from _verses/collection/file.md
+        prev_id, next_id = get_navigation_from_sequence(collection, verse_id, project_dir)
 
         # Update frontmatter with ALL generated content (complete chaupai format)
         # Preserve existing metadata fields but add/update with new structure
@@ -455,12 +467,12 @@ def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
             'layout': frontmatter.get('layout', 'verse'),
             'collection_key': collection,  # Use collection_key, not just collection
             'permalink': frontmatter.get('permalink', f'/{collection}/{verse_id}/'),
-            'title_en': content.get('title_en', frontmatter.get('title_en', f'{verse_type.title()} {verse_num}')),
-            'title_hi': content.get('title_hi', frontmatter.get('title_hi', f'{verse_type} {verse_num}')),
+            'title_en': content.get('title_en', frontmatter.get('title_en', f'{verse_type.title()} {id_number}')),
+            'title_hi': content.get('title_hi', frontmatter.get('title_hi', f'{verse_type} {id_number}')),
             'verse_number': verse_num,
             'verse_type': verse_type,
-            'previous_verse': frontmatter.get('previous_verse', f'/{collection}/{verse_type}-{verse_num-1:02d}' if verse_num > 1 else None),
-            'next_verse': frontmatter.get('next_verse', f'/{collection}/{verse_type}-{verse_num+1:02d}'),
+            'previous_verse': f'/{collection}/{prev_id}/' if prev_id else None,
+            'next_verse': f'/{collection}/{next_id}/' if next_id else None,
             'image': frontmatter.get('image', f'/images/{collection}/modern-minimalist/{verse_id}.png'),
             'devanagari': content['devanagari'],
             'transliteration': content['transliteration'],
@@ -618,6 +630,48 @@ def get_verse_sequence(collection: str, project_dir: Path = Path.cwd()) -> Optio
     except Exception as e:
         print(f"Warning: Error reading sequence from {data_file}: {e}", file=sys.stderr)
         return None
+
+
+def extract_verse_number_from_id(verse_id: str) -> Optional[int]:
+    """
+    Extract the number from a verse ID.
+
+    Args:
+        verse_id: Verse ID like "chaupai-16", "doha-03", "shloka-01"
+
+    Returns:
+        The number from the ID, or None if not found
+    """
+    match = re.search(r'[-_](\d+)$', verse_id)
+    if match:
+        return int(match.group(1))
+    return None
+
+
+def get_navigation_from_sequence(collection: str, verse_id: str, project_dir: Path = Path.cwd()) -> tuple[Optional[str], Optional[str]]:
+    """
+    Get previous and next verse IDs from the sequence.
+
+    Args:
+        collection: Collection key
+        verse_id: Current verse ID
+        project_dir: Project directory
+
+    Returns:
+        Tuple of (previous_verse_id, next_verse_id), None if not found
+    """
+    sequence = get_verse_sequence(collection, project_dir)
+    if not sequence:
+        return None, None
+
+    try:
+        idx = sequence.index(verse_id)
+        prev_id = sequence[idx - 1] if idx > 0 else None
+        next_id = sequence[idx + 1] if idx < len(sequence) - 1 else None
+        return prev_id, next_id
+    except ValueError:
+        # verse_id not in sequence
+        return None, None
 
 
 def find_next_verse(collection: str, project_dir: Path = Path.cwd()) -> Optional[int]:
@@ -788,14 +842,14 @@ Provide ONLY the scene description, no additional text."""
         return None
 
 
-def ensure_scene_description_exists(collection: str, verse_number: int, verse_id: str, devanagari_text: str, title_en: str = None) -> bool:
+def ensure_scene_description_exists(collection: str, verse_position: int, verse_id: str, devanagari_text: str, title_en: str = None) -> bool:
     """
     Ensure scene description exists for the verse. Creates file and/or adds scene if missing.
 
     Args:
         collection: Collection key
-        verse_number: Verse number (for ordering)
-        verse_id: Verse identifier (e.g., chaupai_05)
+        verse_position: Verse position in sequence (for ordering, not used in scene header)
+        verse_id: Verse identifier (e.g., chaupai-05)
         devanagari_text: Canonical Devanagari text for generating description
         title_en: English title of the verse (optional)
 
@@ -825,9 +879,10 @@ Scene descriptions for generating images with DALL-E 3.
     with open(prompts_file, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Extract verse type from verse_id (e.g., "chaupai" from "chaupai_05")
+    # Extract verse type and number from verse_id (e.g., "chaupai" and 5 from "chaupai-05")
     verse_type = verse_id.split('-')[0] if '-' in verse_id else 'verse'
     verse_type_title = verse_type.title()  # Capitalize: Chaupai, Shloka, Doha, etc.
+    verse_number = extract_verse_number_from_id(verse_id) or verse_position  # Extract from ID, fallback to position
 
     # Generate new scene description
     print(f"  → Generating scene description for {verse_type_title} {verse_number}...")
@@ -837,7 +892,7 @@ Scene descriptions for generating images with DALL-E 3.
         print(f"  ✗ Failed to generate scene description")
         return False
 
-    # Build header: "### Chaupai 5 (chaupai_05): Title" or "### Chaupai 5 (chaupai_05)" if no title
+    # Build header: "### Chaupai 5 (chaupai-05): Title" or "### Chaupai 5 (chaupai-05)" if no title
     if title_en:
         header = f"### {verse_type_title} {verse_number} ({verse_id}): {title_en}"
     else:
@@ -1420,7 +1475,8 @@ Environment Variables:
                         generated_content,
                         args.collection,
                         verse_position,
-                        verse_id
+                        verse_id,
+                        Path.cwd()  # Pass current directory as project_dir
                     )
 
                     if results['verse_file_created']:
