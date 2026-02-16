@@ -417,6 +417,65 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
         return False
 
 
+def update_previous_verse_navigation(collection: str, current_verse_id: str, project_dir: Path = Path.cwd()) -> bool:
+    """
+    Update the previous verse's next_verse field to point to the current verse.
+
+    Args:
+        collection: Collection key
+        current_verse_id: Current verse ID
+        project_dir: Project directory
+
+    Returns:
+        True if successful or not needed, False if failed
+    """
+    # Get previous verse ID from sequence
+    prev_id, _ = get_navigation_from_sequence(collection, current_verse_id, project_dir)
+    if not prev_id:
+        # No previous verse, nothing to update
+        return True
+
+    # Find the previous verse file
+    verses_dir = project_dir / "_verses" / collection
+    prev_verse_file = verses_dir / f"{prev_id}.md"
+
+    if not prev_verse_file.exists():
+        # Previous verse file doesn't exist yet, skip
+        return True
+
+    try:
+        # Read the previous verse file
+        with open(prev_verse_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        if not content.startswith('---'):
+            return True
+
+        parts = content.split('---', 2)
+        if len(parts) < 3:
+            return True
+
+        frontmatter = yaml.safe_load(parts[1]) or {}
+        body = parts[2]
+
+        # Update next_verse to point to current verse
+        frontmatter['next_verse'] = f'/{collection}/{current_verse_id}/'
+
+        # Write back
+        frontmatter_str = yaml.dump(frontmatter, allow_unicode=True, sort_keys=False)
+        updated_content = f"---\n{frontmatter_str}---{body}"
+
+        with open(prev_verse_file, 'w', encoding='utf-8') as f:
+            f.write(updated_content)
+
+        print(f"  ✓ Updated previous verse ({prev_id}) navigation")
+        return True
+
+    except Exception as e:
+        print(f"  ⚠ Warning: Could not update previous verse navigation: {e}", file=sys.stderr)
+        return False
+
+
 def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
     """
     Update verse markdown file with generated content.
@@ -840,6 +899,41 @@ Provide ONLY the scene description, no additional text."""
     except Exception as e:
         print(f"  ✗ Error generating scene description: {e}", file=sys.stderr)
         return None
+
+
+def validate_scene_description_exists(collection: str, verse_id: str, project_dir: Path = Path.cwd()) -> bool:
+    """
+    Check if a scene description already exists for the verse.
+
+    Args:
+        collection: Collection key
+        verse_id: Verse identifier
+        project_dir: Project directory
+
+    Returns:
+        True if scene description exists, False otherwise
+    """
+    prompts_dir = project_dir / "docs" / "image-prompts"
+    prompts_file = prompts_dir / f"{collection}.md"
+
+    if not prompts_file.exists():
+        return False
+
+    try:
+        with open(prompts_file, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # Check if verse_id appears in a header (matches the pattern we use)
+        import re
+        # Match headers with verse_id in parentheses
+        verse_id_pattern = rf'###[^\n]*\({re.escape(verse_id)}\)[^\n]*\n'
+        if re.search(verse_id_pattern, content, re.DOTALL):
+            return True
+
+        return False
+
+    except Exception:
+        return False
 
 
 def ensure_scene_description_exists(collection: str, verse_position: int, verse_id: str, devanagari_text: str, title_en: str = None) -> bool:
@@ -1481,6 +1575,8 @@ Environment Variables:
 
                     if results['verse_file_created']:
                         print(f"  ✓ Verse file created successfully")
+                        # Update previous verse's next_verse field
+                        update_previous_verse_navigation(args.collection, verse_id, Path.cwd())
                     else:
                         print(f"  ✗ Failed to create verse file")
 
@@ -1538,14 +1634,22 @@ Environment Variables:
                         except Exception:
                             pass  # If we can't read title, continue without it
 
-                    # Ensure scene description exists (creates file/adds description if needed)
-                    scene_ready = ensure_scene_description_exists(
-                        args.collection,
-                        verse_position,
-                        verse_id,
-                        canonical_data['devanagari'],
-                        title_en
-                    )
+                    # Check if scene description already exists
+                    scene_exists = validate_scene_description_exists(args.collection, verse_id, Path.cwd())
+
+                    if scene_exists:
+                        print(f"  ✓ Scene description already exists for {verse_id}")
+                        scene_ready = True
+                    else:
+                        # Ensure scene description exists (creates file/adds description if needed)
+                        print(f"  → Scene description not found, generating...")
+                        scene_ready = ensure_scene_description_exists(
+                            args.collection,
+                            verse_position,
+                            verse_id,
+                            canonical_data['devanagari'],
+                            title_en
+                        )
 
                     if scene_ready:
                         results['image'] = generate_image(args.collection, verse_position, args.theme, verse_id)
