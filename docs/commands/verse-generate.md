@@ -205,7 +205,7 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 
 ## Requirements
 
-- **For --image**: `OPENAI_API_KEY` + theme config in `docs/themes/<collection-key>/<theme-name>.yml`
+- **For --image**: `OPENAI_API_KEY` + theme config in `data/themes/<collection-key>/<theme-name>.yml`
   - Scene descriptions are automatically generated in `docs/image-prompts/<collection-key>.md` if they don't exist
 - **For --audio**: `ELEVENLABS_API_KEY` + verse file with `devanagari:` field
 - **For --regenerate-content**: `OPENAI_API_KEY` + canonical text in `data/verses/<collection>.yaml`
@@ -224,7 +224,7 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 - Verse ID is automatically detected from existing verse files (e.g., if `chaupai_05.md` exists, uses `chaupai_05`)
 - Use `--verse-id` to override auto-detection when multiple files match (e.g., both `chaupai_05.md` and `doha_05.md` exist)
 - For new verses without files, defaults to `verse_{N:02d}` format
-- Theme configuration must exist in `docs/themes/<collection-key>/<theme-name>.yml` for image generation
+- Theme configuration must exist in `data/themes/<collection-key>/<theme-name>.yml` for image generation
 - Audio generation reads from the `devanagari:` field in verse files
 - Only enabled collections (in `collections.yml`) can be processed
 - Embeddings update processes all collections, not just the current one

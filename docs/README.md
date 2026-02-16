@@ -4,13 +4,23 @@ Detailed documentation for the sanatan-sdk commands and features.
 
 ## Command Reference
 
+### Project Setup
+
+- **[verse-init](commands/verse-init.md)** - Initialize new project with recommended structure
+- **[verse-validate](commands/verse-validate.md)** - Validate project structure and configuration
+
+### Content Generation
+
 - **[verse-generate](commands/verse-generate.md)** - Complete orchestrator for verse content (text fetching, multimedia generation, embeddings)
 - **[verse-translate](commands/verse-translate.md)** - Translate verses into multiple languages (Hindi, Spanish, French, etc.)
-- **[verse-status](commands/verse-status.md)** - Check status and completion of verse collections
-- **[verse-sync](commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
 - **[verse-images](commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](commands/verse-embeddings.md)** - Generate vector embeddings for semantic search
+
+### Project Management
+
+- **[verse-status](commands/verse-status.md)** - Check status and completion of verse collections
+- **[verse-sync](commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
 - **[verse-deploy](commands/verse-deploy.md)** - Deploy Cloudflare Workers as OpenAI API proxy
 
 ## Guides

@@ -4,66 +4,145 @@ Comprehensive guide for using sanatan-sdk to generate multimedia content for spi
 
 ## Table of Contents
 
-- [Project Setup](#project-setup)
+- [Quick Start](#quick-start)
 - [Directory Structure](#directory-structure)
-- [Configuration](#configuration)
 - [Basic Workflows](#basic-workflows)
 - [Batch Processing](#batch-processing)
 - [Theme Customization](#theme-customization)
 - [API Costs](#api-costs)
 - [Best Practices](#best-practices)
 
-## Project Setup
+## Quick Start
 
-### Initial Structure
+Get started with sanatan-sdk in minutes!
 
-Create your project with the following structure:
+### 1. Install
 
 ```bash
-mkdir my-verse-project
-cd my-verse-project
-
-# Create required directories
-mkdir -p _data
-mkdir -p _verses
-mkdir -p docs/image-prompts
-mkdir -p docs/themes
-mkdir -p images
-mkdir -p audio
-mkdir -p data
-
-# Set up environment file
-cp /path/to/sanatan-sdk/.env.example .env
-# Or create manually - see Configuration section below
+pip install sanatan-sdk
 ```
 
-### Collections Configuration
+### 2. Initialize Project with Collection
 
-Create `_data/collections.yml` to define your collections:
+```bash
+# Create project with collection templates
+verse-init --project-name my-verse-project --collection hanuman-chalisa
+cd my-verse-project
+```
+
+**What gets created:**
+- ✅ Complete directory structure
+- ✅ Sample verse files (3 by default, customizable with `--num-verses`)
+- ✅ Canonical verse YAML template
+- ✅ Theme configuration
+- ✅ Scene descriptions template
+- ✅ Collection entry in `_data/collections.yml`
+
+### 3. Configure API Keys
+
+```bash
+cp .env.example .env
+# Edit .env and add your keys from:
+# - OpenAI: https://platform.openai.com/api-keys
+# - ElevenLabs: https://elevenlabs.io/app/settings/api-keys
+```
+
+### 4. Add Canonical Text
+
+Edit `data/verses/hanuman-chalisa.yaml`:
 
 ```yaml
-hanuman-chalisa:
-  enabled: true
-  name:
-    en: "Hanuman Chalisa"
-    hi: "हनुमान चालीसा"
-  subdirectory: "hanuman-chalisa"
-  permalink_base: "/hanuman-chalisa"
-  total_verses: 43
+verse-01:
+  devanagari: "श्रीगुरु चरन सरोज रज, निजमन मुकुर सुधारि।"
 
-sundar-kaand:
-  enabled: true
-  name:
-    en: "Sundar Kaand"
-    hi: "सुंदर काण्ड"
-  subdirectory: "sundar-kaand"
-  permalink_base: "/sundar-kaand"
-  total_verses: 60
+verse-02:
+  devanagari: "बरनउँ रघुबर बिमल जसु, जो दायक फल चारि।।"
 ```
+
+See [Local Verses Guide](local-verses.md) for YAML format details.
+
+### 5. Validate & Generate
+
+```bash
+# Validate setup
+verse-validate
+
+# Generate first verse
+verse-generate --collection hanuman-chalisa --verse 1
+```
+
+**What gets generated:**
+- 🎨 Image: `images/hanuman-chalisa/modern-minimalist/verse-01.png`
+- 🎵 Audio (full): `audio/hanuman-chalisa/verse-01-full.mp3`
+- 🎵 Audio (slow): `audio/hanuman-chalisa/verse-01-slow.mp3`
+- 🔍 Embeddings: `data/embeddings.json`
+
+---
+
+### Existing Projects
+
+Already have a project? Validate and fix structure:
+
+```bash
+verse-validate --fix
+```
+
+### Adding Collections to Existing Projects
+
+Need to add a new collection to your existing project? Use `verse-init --collection`:
+
+```bash
+# Add single collection
+verse-init --collection sundar-kaand --num-verses 60
+
+# Add multiple collections at once
+verse-init --collection sundar-kaand --collection bhagavad-gita
+```
+
+**What gets created:**
+- ✅ Collection structure in `_verses/<collection>/`
+- ✅ Sample verse files (customizable count)
+- ✅ Canonical YAML template in `data/verses/<collection>.yaml`
+- ✅ Theme configuration in `data/themes/<collection>/`
+- ✅ Scene descriptions template
+- ✅ Collection entry appended to `_data/collections.yml`
+
+**Important**: Existing files are never overwritten - only new files are created.
+
+**Complete workflow:**
+```bash
+# 1. Add collection
+verse-init --collection sundar-kaand --num-verses 60
+
+# 2. Validate
+verse-validate
+
+# 3. Add canonical text to data/verses/sundar-kaand.yaml
+
+# 4. Generate first verse
+verse-generate --collection sundar-kaand --verse 1
+```
+
+### Advanced Options
+
+```bash
+# Multiple collections
+verse-init --collection hanuman-chalisa --collection sundar-kaand
+
+# Custom verse count
+verse-init --collection my-collection --num-verses 10
+
+# No collection templates (manual setup)
+verse-init --minimal
+```
+
+See [verse-init documentation](commands/verse-init.md) for all options.
+
+---
 
 ## Directory Structure
 
-The SDK follows a **convention-over-configuration** approach. Your project must follow this structure:
+The SDK follows a **convention-over-configuration** approach. After initialization, your project follows this structure:
 
 ```
 your-project/
@@ -72,25 +151,27 @@ your-project/
 │   └── collections.yml                   # Collection registry
 ├── _verses/
 │   ├── <collection-key>/                 # Verse files by collection
-│   │   ├── verse_01.md
-│   │   ├── verse_02.md
+│   │   ├── verse-01.md
+│   │   ├── verse-02.md
 │   │   └── ...
 │   ├── sundar-kaand/
-│   │   ├── chaupai_01.md
+│   │   ├── chaupai-01.md
 │   │   └── ...
 │   └── sankat-mochan-hanumanashtak/
-│       ├── verse_01.md
+│       ├── verse-01.md
 │       └── ...
 ├── docs/
-│   ├── image-prompts/                    # Scene descriptions by collection
-│   │   ├── <collection-key>.md
-│   │   ├── sundar-kaand.md
-│   │   └── sankat-mochan-hanumanashtak.md
-│   └── themes/
-│       └── <collection-key>/             # Theme configs by collection
-│           ├── modern-minimalist.yml
-│           ├── kids-friendly.yml
-│           └── ...
+│   └── image-prompts/                    # Scene descriptions by collection
+│       ├── <collection-key>.md
+│       ├── sundar-kaand.md
+│       └── sankat-mochan-hanumanashtak.md
+├── data/
+│   ├── themes/
+│   │   └── <collection-key>/             # Theme configs by collection
+│   │       ├── modern-minimalist.yml
+│   │       ├── kids-friendly.yml
+│   │       └── ...
+│   └── embeddings.json                   # Search embeddings (all collections)
 ├── images/
 │   └── <collection-key>/                 # Generated images by collection and theme
 │       ├── <theme-name>/
@@ -98,31 +179,30 @@ your-project/
 │       │   └── ...
 │       └── kids-friendly/
 │           └── ...
-├── audio/
-│   └── <collection-key>/                 # Generated audio by collection
-│       ├── verse_01_full.mp3
-│       ├── verse_01_slow.mp3
-│       └── ...
-└── data/
-    └── embeddings.json                   # Search embeddings (all collections)
+└── audio/
+    └── <collection-key>/                 # Generated audio by collection
+        ├── verse-01-full.mp3
+        ├── verse-01-slow.mp3
+        └── ...
 ```
 
 ### Key Conventions
 
 1. **Collection Keys**: Use kebab-case (e.g., `hanuman-chalisa`, `sundar-kaand`)
-2. **Verse Files**: Named `verse_NN.md` or custom names like `chaupai_NN.md`
+2. **Verse Files**: Named `verse-NN.md` or custom names like `chaupai-NN.md` (dash-separated)
+   - Legacy underscore format (`verse_NN.md`) is still supported for backward compatibility
 3. **Image Prompts**: One file per collection in `docs/image-prompts/<collection-key>.md`
-4. **Theme Files**: One YAML file per theme in `docs/themes/<collection-key>/<theme-name>.yml`
+4. **Theme Files**: One YAML file per theme in `data/themes/<collection-key>/<theme-name>.yml`
 5. **Collections Registry**: Define all collections in `_data/collections.yml` with `enabled: true`
 
 ### Verse File Format
 
-Create verse files in `_verses/<collection-key>/verse_NN.md`:
+Create verse files in `_verses/<collection-key>/verse-NN.md`:
 
 ```markdown
 ---
 verse_number: 1
-verse_id: verse_01
+verse_id: verse-01
 permalink: /hanuman-chalisa/verse-01/
 ---
 
@@ -139,69 +219,6 @@ With the dust of the lotus feet of my Guru, I cleanse the mirror of my mind.
 
 ## Translation
 I clean the mirror of my mind with the dust of the lotus feet of my Guru.
-```
-
-## Configuration
-
-### Environment Variables
-
-Set required API keys in `.env` (copy from `.env.example`):
-
-```bash
-# Copy the example file
-cp .env.example .env
-
-# Edit .env and add your keys:
-# OPENAI_API_KEY=sk-your_openai_key     # Required for images and embeddings
-# ELEVENLABS_API_KEY=your_elevenlabs_key # Required for audio
-```
-
-Get your API keys:
-- OpenAI: https://platform.openai.com/api-keys
-- ElevenLabs: https://elevenlabs.io/app/settings/api-keys
-
-### Theme Configuration
-
-Create theme files in `docs/themes/<collection-key>/<theme-name>.yml`:
-
-**Example: `docs/themes/hanuman-chalisa/modern-minimalist.yml`**
-
-```yaml
-name: Modern Minimalist
-style: |
-  Clean, minimal design with focus on spiritual essence.
-  Soft gradients, simple geometric patterns.
-  Calm and serene color palette.
-
-colors:
-  primary: "#FF6B35"
-  secondary: "#004E89"
-  background: "#F7F7F7"
-
-art_direction: |
-  - Minimalist composition
-  - Soft lighting
-  - Divine atmosphere
-  - Focus on key spiritual elements
-  - No clutter or excessive details
-```
-
-### Image Prompts
-
-Create scene descriptions in `docs/image-prompts/<collection-key>.md`:
-
-**Example: `docs/image-prompts/hanuman-chalisa.md`**
-
-```markdown
-# Hanuman Chalisa - Image Prompts
-
-## Verse 1
-Scene: Lord Hanuman meditating at the feet of his Guru, surrounded by divine light.
-Focus on devotion, spiritual learning, and reverence.
-
-## Verse 2
-Scene: Young Hanuman attempting to swallow the sun, thinking it's a golden fruit.
-Show his divine power and innocent devotion.
 ```
 
 ## Basic Workflows
@@ -247,12 +264,12 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
 **Generate images:**
 ```bash
-verse-images --collection hanuman-chalisa --theme modern-minimalist --verse verse_01
+verse-images --collection hanuman-chalisa --theme modern-minimalist --verse verse-01
 ```
 
 **Generate audio:**
 ```bash
-verse-audio --collection hanuman-chalisa --verse verse_01
+verse-audio --collection hanuman-chalisa --verse verse-01
 ```
 
 **Update embeddings:**
@@ -355,8 +372,8 @@ chmod +x scripts/batch_generate.sh
 
 1. **Create theme file:**
    ```bash
-   mkdir -p docs/themes/hanuman-chalisa
-   touch docs/themes/hanuman-chalisa/watercolor-art.yml
+   mkdir -p data/themes/hanuman-chalisa
+   touch data/themes/hanuman-chalisa/watercolor-art.yml
    ```
 
 2. **Define theme:**
@@ -487,10 +504,39 @@ Understanding the costs of generating verse content:
 
 ## Best Practices
 
-### 1. Version Control
+### 1. Project Setup
+
+**Use verse-init for new projects**:
+```bash
+# Initialize with proper structure
+verse-init --project-name my-project
+
+# Creates all required directories and template files
+# Includes .gitignore configured for verse projects
+```
+
+**Validate regularly**:
+```bash
+# Before generating content
+verse-validate
+
+# Fix common issues automatically
+verse-validate --fix
+
+# In CI/CD pipelines
+verse-validate || exit 1
+```
+
+**View conventions anytime**:
+```bash
+# Quick reference for directory structure
+verse-generate --show-structure
+```
+
+### 2. Version Control
 
 - Commit verse files before generating media
-- Use `.gitignore` for large media files
+- Use `.gitignore` for large media files (created by verse-init)
 - Store themes and prompts in version control
 
 ```gitignore
@@ -504,7 +550,7 @@ data/embeddings.json
 .venv/
 ```
 
-### 2. Rate Limiting
+### 3. Rate Limiting
 
 Always add delays between API calls:
 ```bash
@@ -514,13 +560,13 @@ for i in {1..43}; do
 done
 ```
 
-### 3. Backup Strategy
+### 4. Backup Strategy
 
 - Keep backups of generated content
 - Store original verse files separately
 - Export embeddings periodically
 
-### 4. Quality Control
+### 5. Quality Control
 
 Review generated content:
 ```bash
@@ -528,18 +574,18 @@ Review generated content:
 verse-generate --collection hanuman-chalisa --verse 1
 
 # Review image in images/hanuman-chalisa/modern-minimalist/verse-01.png
-# Review audio in audio/hanuman-chalisa/verse_01_full.mp3
+# Review audio in audio/hanuman-chalisa/verse-01-full.mp3
 
 # If satisfied, proceed with batch
 ```
 
-### 5. Theme Consistency
+### 6. Theme Consistency
 
 - Use the same theme for all verses in a collection
 - Create theme variants for different audiences
 - Test themes on a few verses before batch processing
 
-### 6. Documentation
+### 7. Documentation
 
 Keep notes on:
 - Which verses have been generated
@@ -547,7 +593,7 @@ Keep notes on:
 - Any custom modifications
 - Prompt adjustments for specific verses
 
-### 7. Error Handling
+### 8. Error Handling
 
 ```bash
 # Log output for debugging
@@ -584,11 +630,11 @@ cat _data/collections.yml
 
 ### Image Generation Fails
 - Check prompt file exists: `docs/image-prompts/<collection-key>.md`
-- Verify theme file exists: `docs/themes/<collection-key>/<theme-name>.yml`
+- Verify theme file exists: `data/themes/<collection-key>/<theme-name>.yml`
 - Review OpenAI API quota
 
 ### Audio Generation Fails
-- Check verse file exists: `_verses/<collection-key>/verse_NN.md`
+- Check verse file exists: `_verses/<collection-key>/verse-NN.md` (dash or underscore format)
 - Verify Devanagari text is present
 - Review ElevenLabs API quota
 

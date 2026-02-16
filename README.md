@@ -14,42 +14,73 @@ Complete toolkit for generating rich multimedia content for spiritual text colle
 
 ## Quick Start
 
+### New Project Setup (Recommended)
+
 ```bash
-# Install
+# 1. Install
 pip install sanatan-sdk
 
-# Set up API keys (in your project directory)
+# 2. Create project with collection templates
+verse-init --project-name my-verse-project --collection hanuman-chalisa
+cd my-verse-project
+
+# 3. Configure API keys
 cp .env.example .env
-# Edit .env and add your API keys
+# Edit .env and add your API keys from:
+# - OpenAI: https://platform.openai.com/api-keys
+# - ElevenLabs: https://elevenlabs.io/app/settings/api-keys
 
-# List available collections
-verse-generate --list-collections
+# 4. Add canonical Devanagari text
+# Edit data/verses/hanuman-chalisa.yaml with actual verse text
 
-# Complete workflow (default) - fetch text, generate media, update embeddings
-verse-generate --collection hanuman-chalisa --verse 15
+# 5. Validate setup
+verse-validate
 
-# Skip text fetching (when verse text already exists)
-verse-generate --collection sundar-kaand --verse 5 --no-fetch-text
-
-# Or generate specific components only
-verse-generate --collection sundar-kaand --verse 3 --image
-verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
+# 6. Generate multimedia content
+verse-generate --collection hanuman-chalisa --verse 1
 ```
 
-By default, the complete workflow includes:
-- 🔍 Read canonical Devanagari text from local YAML files
-- 🎨 DALL-E 3 generated image (saved to `images/{collection}/{theme}/`)
-- 🎵 Full-speed pronunciation (saved to `audio/{collection}/{verse}_full.mp3`)
-- 🎵 Slow-speed pronunciation (saved to `audio/{collection}/{verse}_slow.mp3`)
-- 🔗 Update vector embeddings for semantic search
+**What you get**: Verse file, AI-generated image, audio (full + slow speed), and search embeddings!
 
-**Text Source**:
-- Local YAML file: `data/verses/{collection}.yaml` or `.yml` (required)
-- You must create this file with canonical verse text (see [Local Verses Guide](docs/local-verses.md))
+### Existing Project
 
-Opt-out flags (to skip specific steps):
-- `--no-fetch-text` - Skip fetching text (use when verse text already exists)
-- `--no-update-embeddings` - Skip updating embeddings
+```bash
+# Validate and fix structure
+verse-validate --fix
+
+# Generate content
+verse-generate --collection hanuman-chalisa --verse 15
+
+# Check status
+verse-status --collection hanuman-chalisa
+```
+
+### Advanced Usage
+
+```bash
+# Multiple collections at once
+verse-init --collection hanuman-chalisa --collection sundar-kaand
+
+# Custom number of sample verses
+verse-init --collection my-collection --num-verses 10
+
+# Generate specific components only
+verse-generate --collection sundar-kaand --verse 3 --image
+verse-generate --collection sundar-kaand --verse 3 --audio
+
+# Skip embeddings update (faster)
+verse-generate --collection hanuman-chalisa --verse 15 --no-update-embeddings
+```
+
+### What Gets Generated
+
+Each verse generation creates:
+- 🎨 **Image**: `images/{collection}/{theme}/verse-01.png` (DALL-E 3)
+- 🎵 **Audio (full)**: `audio/{collection}/verse-01-full.mp3` (ElevenLabs)
+- 🎵 **Audio (slow)**: `audio/{collection}/verse-01-slow.mp3` (0.75x speed)
+- 🔍 **Embeddings**: `data/embeddings.json` (for semantic search)
+
+**Text Source**: Canonical Devanagari text from `data/verses/{collection}.yaml` ([Local Verses Guide](docs/local-verses.md))
 
 ## Installation
 
@@ -59,13 +90,20 @@ pip install sanatan-sdk
 
 ## Commands
 
+### Project Setup
+- **[verse-init](docs/commands/verse-init.md)** - Initialize new project with recommended structure
+- **[verse-validate](docs/commands/verse-validate.md)** - Validate project structure and configuration
+
+### Content Generation
 - **[verse-generate](docs/commands/verse-generate.md)** - Complete orchestrator for verse content (text fetching, multimedia generation, embeddings)
 - **[verse-translate](docs/commands/verse-translate.md)** - Translate verses into multiple languages (Hindi, Spanish, French, etc.)
-- **[verse-status](docs/commands/verse-status.md)** - Check status, completion, and validate text against canonical source
-- **[verse-sync](docs/commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
 - **[verse-images](docs/commands/verse-images.md)** - Generate images using DALL-E 3
 - **[verse-audio](docs/commands/verse-audio.md)** - Generate audio pronunciations using ElevenLabs
 - **[verse-embeddings](docs/commands/verse-embeddings.md)** - Generate vector embeddings for semantic search ([multi-collection guide](docs/multi-collection.md))
+
+### Project Management
+- **[verse-status](docs/commands/verse-status.md)** - Check status, completion, and validate text against canonical source
+- **[verse-sync](docs/commands/verse-sync.md)** - Sync verse text with canonical source (fix mismatches)
 - **[verse-deploy](docs/commands/verse-deploy.md)** - Deploy Cloudflare Worker for API proxy
 
 ## Configuration

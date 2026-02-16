@@ -1794,6 +1794,71 @@ def update_embeddings(collection: str) -> bool:
         return False
 
 
+def show_directory_structure():
+    """Display expected directory structure and conventions."""
+    print()
+    print("=" * 70)
+    print("📁 Expected Directory Structure & Conventions")
+    print("=" * 70)
+    print()
+    print("Your project should follow this structure:")
+    print()
+    print("""your-project/
+├── .env                                  # API keys (gitignored)
+├── .env.example                          # Template for API keys
+├── _data/
+│   └── collections.yml                   # Collection registry
+├── _verses/
+│   └── <collection-key>/                 # Verse markdown files
+│       ├── verse-01.md                   # Dash-separated (recommended)
+│       └── chaupai-05.md                 # Custom verse types
+├── data/
+│   ├── themes/
+│   │   └── <collection-key>/             # Theme configurations
+│   │       ├── modern-minimalist.yml
+│   │       └── kids-friendly.yml
+│   └── verses/
+│       └── <collection>.yaml             # Canonical verse text (YAML)
+├── docs/
+│   └── image-prompts/                    # Scene descriptions (auto-generated)
+│       └── <collection-key>.md
+├── images/                               # Generated images (gitignored)
+│   └── <collection-key>/
+│       └── <theme-name>/
+│           └── verse-01.png
+└── audio/                                # Generated audio (gitignored)
+    └── <collection-key>/
+        ├── verse-01-full.mp3
+        └── verse-01-slow.mp3
+""")
+    print()
+    print("📋 Key Conventions:")
+    print("-" * 70)
+    print("  1. Collection Keys: Use kebab-case (e.g., hanuman-chalisa)")
+    print("  2. Verse Files: Use dash-separated format (verse-01.md)")
+    print("     • Legacy underscore format (verse_01.md) still supported")
+    print("  3. Theme Location: data/themes/{collection}/{theme}.yml")
+    print("  4. Canonical Text: data/verses/{collection}.yaml")
+    print("  5. Collections Registry: _data/collections.yml with enabled: true")
+    print()
+    print("🚀 Quick Setup:")
+    print("-" * 70)
+    print("  # Initialize new project")
+    print("  verse-init --project-name my-project")
+    print()
+    print("  # Validate existing project")
+    print("  verse-validate")
+    print()
+    print("  # Auto-fix common issues")
+    print("  verse-validate --fix")
+    print()
+    print("📚 Documentation:")
+    print("-" * 70)
+    print("  • Usage Guide: https://github.com/sanatan-learnings/sanatan-sdk/blob/main/docs/usage.md")
+    print("  • Troubleshooting: https://github.com/sanatan-learnings/sanatan-sdk/blob/main/docs/troubleshooting.md")
+    print()
+
+
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
@@ -1932,6 +1997,13 @@ Environment Variables:
         help="List available collections and exit"
     )
 
+    # Show structure
+    parser.add_argument(
+        "--show-structure",
+        action="store_true",
+        help="Show expected directory structure and conventions"
+    )
+
     # Collection and verse identification
     parser.add_argument(
         "--collection",
@@ -2054,6 +2126,11 @@ Environment Variables:
     # Handle list collections
     if args.list_collections:
         list_collections()
+        sys.exit(0)
+
+    # Handle show structure
+    if args.show_structure:
+        show_directory_structure()
         sys.exit(0)
 
     # Validate required arguments

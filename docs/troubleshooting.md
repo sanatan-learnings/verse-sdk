@@ -163,7 +163,7 @@ Theme file missing or incorrectly named.
 Create theme configuration:
 
 ```bash
-cat > docs/themes/modern-minimalist.yml << EOF
+cat > data/themes/hanuman-chalisa/modern-minimalist.yml << EOF
 name: modern-minimalist
 style_modifier: |
   Your style description here...
@@ -208,7 +208,7 @@ Required directories don't exist.
 **Solution**:
 
 ```bash
-mkdir -p _verses docs/themes images/modern-minimalist audio data
+mkdir -p _verses data/themes images/modern-minimalist audio data
 ```
 
 ### Generated files are empty

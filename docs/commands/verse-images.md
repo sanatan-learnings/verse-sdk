@@ -17,7 +17,7 @@ The `verse-images` command generates artwork for verses using OpenAI's DALL-E 3 
 ### Required
 
 - `--collection NAME` - Collection key (e.g., `hanuman-chalisa`, `sundar-kaand`)
-- `--theme NAME` - Theme name (must have corresponding `docs/themes/<collection-key>/<theme-name>.yml`)
+- `--theme NAME` - Theme name (must have corresponding `data/themes/<collection-key>/<theme-name>.yml`)
 
 ### Optional
 
@@ -69,7 +69,7 @@ This will prompt for confirmation before regenerating all images.
 
 ## Theme Configuration
 
-Themes are defined per collection in `docs/themes/<collection-key>/<theme-name>.yml`:
+Themes are defined per collection in `data/themes/<collection-key>/<theme-name>.yml`:
 
 ```yaml
 name: modern-minimalist
@@ -88,8 +88,8 @@ style: natural         # Options: natural, vivid
 ```
 
 Example paths:
-- `docs/themes/hanuman-chalisa/modern-minimalist.yml`
-- `docs/themes/sundar-kaand/kids-friendly.yml`
+- `data/themes/hanuman-chalisa/modern-minimalist.yml`
+- `data/themes/sundar-kaand/kids-friendly.yml`
 
 ### Theme Options
 
@@ -149,8 +149,8 @@ Example paths:
 
 ```bash
 # 1. Create theme configuration for a collection
-mkdir -p docs/themes/hanuman-chalisa
-cat > docs/themes/hanuman-chalisa/mystical-art.yml << EOF
+mkdir -p data/themes/hanuman-chalisa
+cat > data/themes/hanuman-chalisa/mystical-art.yml << EOF
 name: mystical-art
 style_modifier: |
   Mystical spiritual art with ethereal lighting...
@@ -185,7 +185,7 @@ For 700 verses (complete Bhagavad Gita):
 
 - `OPENAI_API_KEY` environment variable
 - Scene descriptions in `docs/image-prompts/<collection-key>.md`
-- Theme configuration in `docs/themes/<collection-key>/<theme-name>.yml`
+- Theme configuration in `data/themes/<collection-key>/<theme-name>.yml`
 - Collection enabled in `_data/collections.yml`
 
 ## Notes
