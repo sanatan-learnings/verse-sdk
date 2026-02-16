@@ -1256,6 +1256,144 @@ def infer_verse_id(collection: str, verse_position: int, project_dir: Path = Pat
         return f"verse-{verse_position:02d}"
 
 
+# ==================== YAML Scene Description Support ====================
+
+def load_scenes_from_yaml(collection: str, project_dir: Path = Path.cwd()) -> Optional[Dict]:
+    """
+    Load scene descriptions from data/scenes/{collection}.yml
+
+    Args:
+        collection: Collection key (e.g., "hanuman-chalisa")
+        project_dir: Project directory
+
+    Returns:
+        Dictionary with scene data, or None if file not found
+
+    Raises:
+        UserFriendlyError: If file format is invalid or migration needed
+    """
+    scenes_dir = project_dir / "data" / "scenes"
+    scenes_file = scenes_dir / f"{collection}.yml"
+
+    # Try .yaml extension as fallback
+    if not scenes_file.exists():
+        scenes_file = scenes_dir / f"{collection}.yaml"
+
+    if not scenes_file.exists():
+        # Check if old Markdown format exists
+        old_format_file = project_dir / "docs" / "image-prompts" / f"{collection}.md"
+        if old_format_file.exists():
+            raise UserFriendlyError(
+                f"Scene file not found: {scenes_file}",
+                [
+                    "⚠️  BREAKING CHANGE: Scene descriptions moved to YAML format",
+                    "",
+                    f"Old location (no longer supported): {old_format_file}",
+                    f"New location (required): {scenes_file}",
+                    "",
+                    "MIGRATION REQUIRED:",
+                    "1. Create data/scenes/ directory",
+                    f"2. Convert {old_format_file.name} → {scenes_file.name}",
+                    "",
+                    "Conversion script:",
+                    "https://github.com/sanatan-learnings/hanuman-gpt/blob/main/scripts/convert_scenes_to_yaml.py",
+                    "",
+                    "Or see example YAML files:",
+                    "https://github.com/sanatan-learnings/hanuman-gpt/tree/main/data/scenes"
+                ]
+            )
+        return None
+
+    try:
+        with open(scenes_file, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+
+        # Validate structure
+        if not isinstance(data, dict):
+            raise UserFriendlyError(
+                f"Invalid scene file format: {scenes_file.name}",
+                [
+                    "Scene file must be a YAML dictionary",
+                    "Expected structure: { _meta: {...}, scenes: {...} }",
+                    "See: https://github.com/sanatan-learnings/hanuman-gpt/blob/main/data/scenes/"
+                ]
+            )
+
+        if 'scenes' not in data:
+            raise UserFriendlyError(
+                f"Missing 'scenes' section in {scenes_file.name}",
+                [
+                    "Scene file must have a 'scenes' section with verse descriptions",
+                    "Format: scenes:\n  verse-01:\n    title: ...\n    description: ...",
+                    "See: https://github.com/sanatan-learnings/hanuman-gpt/blob/main/data/scenes/"
+                ]
+            )
+
+        return data
+
+    except yaml.YAMLError as e:
+        raise UserFriendlyError(
+            f"Invalid YAML syntax in {scenes_file.name}",
+            [
+                f"YAML parse error: {str(e)}",
+                "Check indentation and syntax",
+                "Use a YAML validator: https://www.yamllint.com/"
+            ]
+        )
+    except Exception as e:
+        if DEBUG_MODE:
+            raise
+        raise UserFriendlyError(
+            f"Error reading scene file: {scenes_file.name}",
+            [
+                f"Error: {str(e)}",
+                "Check file permissions and encoding (must be UTF-8)",
+                "Use --debug flag to see full error details"
+            ]
+        )
+
+
+def get_scene_description(collection: str, verse_id: str, project_dir: Path = Path.cwd()) -> Optional[Dict]:
+    """
+    Get scene description for a specific verse from YAML file.
+
+    Args:
+        collection: Collection key
+        verse_id: Verse identifier (e.g., "chaupai-05")
+        project_dir: Project directory
+
+    Returns:
+        Dictionary with 'title' and 'description' keys, or None if not found
+    """
+    scenes_data = load_scenes_from_yaml(collection, project_dir)
+
+    if not scenes_data:
+        return None
+
+    scenes = scenes_data.get('scenes', {})
+
+    # Try exact match first
+    if verse_id in scenes:
+        scene = scenes[verse_id]
+        if isinstance(scene, dict) and 'description' in scene:
+            return {
+                'title': scene.get('title', ''),
+                'description': scene['description']
+            }
+
+    # Try with underscores (backward compatibility)
+    verse_id_underscore = verse_id.replace('-', '_')
+    if verse_id_underscore in scenes:
+        scene = scenes[verse_id_underscore]
+        if isinstance(scene, dict) and 'description' in scene:
+            return {
+                'title': scene.get('title', ''),
+                'description': scene['description']
+            }
+
+    return None
+
+
 def generate_scene_description(devanagari_text: str, verse_id: str, collection: str) -> str:
     """
     Generate scene description from Devanagari text using GPT-4.
@@ -1309,7 +1447,7 @@ Provide ONLY the scene description, no additional text."""
 
 def validate_scene_description_exists(collection: str, verse_id: str, project_dir: Path = Path.cwd()) -> bool:
     """
-    Check if a scene description already exists for the verse.
+    Check if a scene description exists for the verse in data/scenes/{collection}.yml
 
     Args:
         collection: Collection key
@@ -1319,27 +1457,8 @@ def validate_scene_description_exists(collection: str, verse_id: str, project_di
     Returns:
         True if scene description exists, False otherwise
     """
-    prompts_dir = project_dir / "docs" / "image-prompts"
-    prompts_file = prompts_dir / f"{collection}.md"
-
-    if not prompts_file.exists():
-        return False
-
-    try:
-        with open(prompts_file, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        # Check if verse_id appears in a header (matches the pattern we use)
-        import re
-        # Match headers with verse_id in parentheses
-        verse_id_pattern = rf'###[^\n]*\({re.escape(verse_id)}\)[^\n]*\n'
-        if re.search(verse_id_pattern, content, re.DOTALL):
-            return True
-
-        return False
-
-    except Exception:
-        return False
+    scene = get_scene_description(collection, verse_id, project_dir)
+    return scene is not None
 
 
 def ensure_scene_description_exists(collection: str, verse_position: int, verse_id: str, devanagari_text: str,
@@ -1361,8 +1480,14 @@ def ensure_scene_description_exists(collection: str, verse_position: int, verse_
         - "prefer-existing" mode: Returns (True, "existing"|"generated")
         - "auto-generate" mode: Always generates, returns (True, "generated")
     """
-    prompts_dir = Path.cwd() / "docs" / "image-prompts"
-    prompts_file = prompts_dir / f"{collection}.md"
+    scenes_dir = Path.cwd() / "data" / "scenes"
+    scenes_file = scenes_dir / f"{collection}.yml"
+
+    # Try .yaml extension as fallback
+    if not scenes_file.exists():
+        scenes_file_yaml = scenes_dir / f"{collection}.yaml"
+        if scenes_file_yaml.exists():
+            scenes_file = scenes_file_yaml
 
     # Extract verse type and number from verse_id (e.g., "chaupai" and 5 from "chaupai-05")
     verse_type = verse_id.split('-')[0] if '-' in verse_id else 'verse'
@@ -1378,9 +1503,14 @@ def ensure_scene_description_exists(collection: str, verse_position: int, verse_
         if not scene_exists:
             error_msg = f"Scene description required but not found for {verse_id}"
             instructions = [
-                f"Add scene description to: {prompts_file}",
-                f"Add a section with header: ### {verse_type_title} {verse_number} ({verse_id})",
-                "Include a **Scene Description**: paragraph with the visual description",
+                f"Add scene description to: {scenes_file}",
+                f"Expected format:",
+                f"  scenes:",
+                f"    {verse_id}:",
+                f"      title: \"Brief Title\"",
+                f"      description: |",
+                f"        Visual scene description...",
+                "",
                 "Or use --prefer-existing-scene to auto-generate missing scenes"
             ]
             return False, "\n".join([error_msg] + [f"  → {inst}" for inst in instructions])
@@ -1405,25 +1535,7 @@ def ensure_scene_description_exists(collection: str, verse_position: int, verse_
         pass
 
     # Generation logic (for prefer-existing when missing, or auto-generate)
-    prompts_dir.mkdir(parents=True, exist_ok=True)
-
-    # Create file if it doesn't exist
-    if not prompts_file.exists():
-        print(f"  → Creating scene descriptions file: {prompts_file.name}")
-        header = f"""# {collection.replace('-', ' ').title()} - Image Prompts
-
-Scene descriptions for generating images with DALL-E 3.
-
----
-
-"""
-        with open(prompts_file, 'w', encoding='utf-8') as f:
-            f.write(header)
-        print(f"  ✓ Created {prompts_file.name}")
-
-    # Read current content
-    with open(prompts_file, 'r', encoding='utf-8') as f:
-        content = f.read()
+    scenes_dir.mkdir(parents=True, exist_ok=True)
 
     # Generate new scene description
     print(f"  → Generating scene description for {verse_type_title} {verse_number}...")
@@ -1433,64 +1545,58 @@ Scene descriptions for generating images with DALL-E 3.
         print(f"  ✗ Failed to generate scene description")
         return False, "generation_failed"
 
-    # Build header: "### Chaupai 5 (chaupai-05): Title" or "### Chaupai 5 (chaupai-05)" if no title
-    if title_en:
-        header = f"### {verse_type_title} {verse_number} ({verse_id}): {title_en}"
+    # Load existing scenes or create new structure
+    if scenes_file.exists():
+        with open(scenes_file, 'r', encoding='utf-8') as f:
+            scenes_data = yaml.safe_load(f) or {}
     else:
-        header = f"### {verse_type_title} {verse_number} ({verse_id})"
+        print(f"  → Creating scene descriptions file: {scenes_file.name}")
+        scenes_data = {
+            '_meta': {
+                'collection': collection,
+                'description': 'Scene descriptions for image generation',
+                'format': 'theme-agnostic scene descriptions'
+            },
+            'scenes': {}
+        }
 
-    # Mark as AI-generated
-    ai_marker = "[AI-Generated - Review Recommended]"
+    # Ensure scenes section exists
+    if 'scenes' not in scenes_data:
+        scenes_data['scenes'] = {}
 
-    # Prepare new verse entry
-    verse_entry = f"""{header}
+    # Build scene entry
+    scene_title = title_en if title_en else f"{verse_type_title} {verse_number}"
 
-**Scene Description**: {ai_marker}
-{scene_description}
+    # Add/update scene with AI-generated marker in title
+    scenes_data['scenes'][verse_id] = {
+        'title': f"{scene_title} [AI-Generated - Review Recommended]",
+        'description': scene_description
+    }
 
----
+    # Write back to file with nice formatting
+    try:
+        with open(scenes_file, 'w', encoding='utf-8') as f:
+            # Use custom YAML formatting for better readability
+            yaml.dump(scenes_data, f,
+                     default_flow_style=False,
+                     allow_unicode=True,
+                     sort_keys=False,
+                     width=120)
 
-"""
+        if scene_exists:
+            print(f"  ✓ Updated scene description for {verse_type_title} {verse_number} in {scenes_file.name}")
+        else:
+            print(f"  ✓ Added scene description for {verse_type_title} {verse_number} to {scenes_file.name}")
 
-    # Check if scene description already exists (match both old and new formats)
-    import re
-    # Match verse header followed by content until the next --- separator or end of file
-    # Use \s* to handle variable whitespace before ---
-    # First try to match by verse_id in parentheses (most specific)
-    # Support both dash and underscore formats for backward compatibility
-    verse_id_dash = re.escape(verse_id)
-    verse_id_underscore = re.escape(verse_id.replace('-', '_'))
-    verse_id_pattern = rf'###[^\n]*\((?:{verse_id_dash}|{verse_id_underscore})\)[^\n]*\n.*?(?=\n---\s*\n|\Z)'
-    # Fallback: match by verse number (for entries without verse_id)
-    verse_number_pattern = rf'### (?:Verse {verse_number}|{verse_type_title} {verse_number})(?![^\n]*\()\s*[^\n]*\n.*?(?=\n---\s*\n|\Z)'
+        print(f"  ⚠ [AI-Generated - Review Recommended]")
+        return True, "generated"
 
-    # Try verse_id match first (catches duplicates with any verse number)
-    verse_pattern = verse_id_pattern if re.search(verse_id_pattern, content, re.DOTALL) else verse_number_pattern
-
-    if re.search(verse_pattern, content, re.DOTALL):
-        # Replace existing scene description
-        print(f"  → Replacing existing scene description for {verse_type_title} {verse_number}...")
-        updated_content = re.sub(
-            verse_pattern,
-            verse_entry.rstrip('\n'),
-            content,
-            flags=re.DOTALL
-        )
-
-        with open(prompts_file, 'w', encoding='utf-8') as f:
-            f.write(updated_content)
-
-        print(f"  ✓ Updated scene description for {verse_type_title} {verse_number} in {prompts_file.name}")
-        print(f"  ⚠ {ai_marker}")
-    else:
-        # Append new scene description
-        with open(prompts_file, 'a', encoding='utf-8') as f:
-            f.write(verse_entry)
-
-        print(f"  ✓ Added scene description for {verse_type_title} {verse_number} to {prompts_file.name}")
-        print(f"  ⚠ {ai_marker}")
-
-    return True, "generated"
+    except Exception as e:
+        print(f"  ✗ Failed to write scene file: {e}")
+        if DEBUG_MODE:
+            import traceback
+            traceback.print_exc()
+        return False, "write_failed"
 
 
 def generate_image(collection: str, verse: int, theme: str, verse_id: str = None) -> bool:
