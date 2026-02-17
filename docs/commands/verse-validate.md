@@ -66,6 +66,8 @@ verse-validate --fix --dry-run
 #   → Would create data/themes/
 #   → Would create .env.example
 #   → Would create _data/collections.yml
+#   → Would add bhagavad-gita collection to _data/collections.yml (18 verses)
+#   → Would create template data/verses/bhagavad-gita.yaml (18 verse entries)
 #   → Would rename hanuman-chalisa/verse_01.md → verse-01.md
 #   → Would rename hanuman-chalisa/verse_02.md → verse-02.md
 ```
@@ -82,6 +84,8 @@ verse-validate --fix
 #   ✓ Created data/themes/
 #   ✓ Created .env.example
 #   ✓ Created _data/collections.yml
+#   ✓ Added bhagavad-gita collection to _data/collections.yml (18 verses)
+#   ✓ Created template data/verses/bhagavad-gita.yaml (18 verse entries)
 #   ✓ Renamed hanuman-chalisa/verse_01.md → verse-01.md
 #   ✓ Renamed hanuman-chalisa/verse_02.md → verse-02.md
 ```
@@ -89,6 +93,11 @@ verse-validate --fix
 Creates missing:
 - Required directories (`_data`, `_verses`, `data`)
 - Template files (`.env.example`, `_data/collections.yml`)
+
+Automatically infers and adds:
+- Collection entries in `_data/collections.yml` for any verse directories found in `_verses/`
+- Sets `enabled: true`, generates display name, counts verses automatically
+- Template canonical verse files in `data/verses/<collection>.yaml` with entries for each verse
 
 Automatically migrates:
 - Verse filenames from underscore format (`verse_01.md`) to dash format (`verse-01.md`)

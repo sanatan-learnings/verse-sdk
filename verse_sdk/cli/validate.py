@@ -305,6 +305,103 @@ ELEVENLABS_API_KEY=your_elevenlabs_key_here
                 collections_file.write_text(content)
             actions.append(f"{prefix} _data/collections.yml")
 
+        # Infer and add missing collection entries
+        verses_dir = self.project_dir / "_verses"
+        if verses_dir.exists() and collections_file.exists():
+            # Load existing collections
+            try:
+                with open(collections_file, 'r') as f:
+                    collections = yaml.safe_load(f) or {}
+            except yaml.YAMLError:
+                collections = {}
+
+            # Find all collection directories
+            collection_dirs = [d for d in verses_dir.iterdir() if d.is_dir() and not d.name.startswith('.')]
+
+            # Check which collections are missing
+            missing_collections = []
+            for collection_dir in collection_dirs:
+                collection_key = collection_dir.name
+                if collection_key not in collections:
+                    missing_collections.append(collection_key)
+
+            # Add missing collections
+            if missing_collections:
+                add_prefix = "Would add" if dry_run else "Added"
+                for collection_key in missing_collections:
+                    # Count verse files
+                    verse_files = list((verses_dir / collection_key).glob("*.md"))
+                    verse_count = len(verse_files)
+
+                    # Generate display name (title case from key)
+                    display_name = collection_key.replace('-', ' ').title()
+
+                    if not dry_run:
+                        # Add to collections dict
+                        collections[collection_key] = {
+                            'enabled': True,
+                            'name': {
+                                'en': display_name,
+                            },
+                            'subdirectory': collection_key,
+                            'permalink_base': f"/{collection_key}",
+                            'total_verses': verse_count,
+                        }
+
+                    actions.append(f"{add_prefix} {collection_key} collection to _data/collections.yml ({verse_count} verses)")
+
+                # Write updated collections.yml
+                if not dry_run and missing_collections:
+                    with open(collections_file, 'w') as f:
+                        yaml.dump(collections, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
+
+        # Create template canonical verse YAML files for collections that don't have one
+        if verses_dir.exists() and collections_file.exists():
+            # Load collections
+            try:
+                with open(collections_file, 'r') as f:
+                    collections = yaml.safe_load(f) or {}
+            except yaml.YAMLError:
+                collections = {}
+
+            # Check each enabled collection
+            for collection_key, config in collections.items():
+                if isinstance(config, dict) and config.get('enabled'):
+                    # Check if canonical verse file exists
+                    canonical_files = [
+                        self.project_dir / "data" / "verses" / f"{collection_key}.yaml",
+                        self.project_dir / "data" / "verses" / f"{collection_key}.yml",
+                    ]
+                    canonical_exists = any(cf.exists() for cf in canonical_files)
+
+                    if not canonical_exists:
+                        # Get verse files to create template structure
+                        collection_verses_dir = verses_dir / collection_key
+                        if collection_verses_dir.exists():
+                            verse_files = sorted(collection_verses_dir.glob("*.md"))
+
+                            if verse_files:
+                                create_prefix = "Would create template" if dry_run else "Created template"
+                                canonical_file = self.project_dir / "data" / "verses" / f"{collection_key}.yaml"
+
+                                if not dry_run:
+                                    # Create template with entries for each verse file
+                                    template_content = f"# Canonical verse text for {collection_key}\n"
+                                    template_content += f"# Edit this file to add the original Devanagari text for each verse\n\n"
+
+                                    for verse_file in verse_files:
+                                        # Extract verse number/id from filename (e.g., verse-01.md -> verse-01)
+                                        verse_id = verse_file.stem
+                                        template_content += f"{verse_id}:\n"
+                                        template_content += f"  devanagari: |\n"
+                                        template_content += f"    # Add Devanagari text here\n"
+                                        template_content += f"  transliteration: |\n"
+                                        template_content += f"    # Add transliteration here (optional)\n\n"
+
+                                    canonical_file.write_text(template_content)
+
+                                actions.append(f"{create_prefix} data/verses/{collection_key}.yaml ({len(verse_files)} verse entries)")
+
         # Rename verse files from underscore to dash format
         verses_dir = self.project_dir / "_verses"
         if verses_dir.exists():
