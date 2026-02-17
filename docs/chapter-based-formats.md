@@ -95,20 +95,65 @@ verse-add --collection hanuman-chalisa --verse 1 --chapter 2
 # Warning: --chapter flag provided but collection doesn't use chapter-based format
 ```
 
+## Configuration in collections.yml
+
+**NEW in v0.26.1**: Configure verse format in `_data/collections.yml` for automatic detection!
+
+```yaml
+# _data/collections.yml
+
+bhagavad-gita:
+  name:
+    en: "Bhagavad Gita"
+  total_verses: 700
+  chapters: 18                    # Indicates chapter-based format
+  verse_format: "shloka"          # Optional: verse term (default: "shloka" for chapter-based)
+  enabled: true
+```
+
+**Benefits:**
+- ✅ Empty YAML files use correct format automatically
+- ✅ No need to manually specify format
+- ✅ Consistent format across your project
+- ✅ Supports custom verse terms (shloka, chaupai, etc.)
+
+**Format Detection:**
+```yaml
+# Multi-chapter collection
+chapters: 18
+verse_format: "shloka"  # Optional, defaults to "shloka"
+# Creates: chapter-01-shloka-01, chapter-02-shloka-47, etc.
+
+# Single-chapter collection
+verse_format: "chaupai"
+# Creates: chaupai-01, chaupai-02, etc.
+
+# Default (no configuration)
+# Creates: verse-01, verse-02, etc.
+```
+
 ## Best Practices
 
-1. **Consistent Format**: Use the same format throughout your collection
+1. **Configure collections.yml First** (NEW):
+   ```yaml
+   # Define format in collections.yml before adding verses
+   bhagavad-gita:
+     chapters: 18
+     verse_format: "shloka"
+   ```
+
+2. **Consistent Format**: Use the same format throughout your collection
    - Good: `chapter-01-shloka-01`, `chapter-02-shloka-01`
    - Bad: Mixing `chapter-1-shloka-1` and `chapter-02-shloka-02`
 
-2. **Zero Padding**: Match the padding used in existing verses
+3. **Zero Padding**: Match the padding used in existing verses
    - If existing verses use `chapter-01`, continue with 2-digit padding
    - SDK will auto-detect and preserve padding
 
-3. **Sequential Addition**: Add chapters in order when possible
+4. **Sequential Addition**: Add chapters in order when possible
    - Easier to maintain and review
 
-4. **Use _meta.sequence**: For chapter-based collections, maintain a sequence list:
+5. **Use _meta.sequence**: For chapter-based collections, maintain a sequence list:
    ```yaml
    _meta:
      sequence:
