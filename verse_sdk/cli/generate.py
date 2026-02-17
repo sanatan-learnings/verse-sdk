@@ -1146,51 +1146,45 @@ def find_next_verse(collection: str, project_dir: Path = Path.cwd()) -> Optional
     """
     Find the next verse position to generate.
 
-    If a data file with sequence exists, uses the sequence to find the next position.
-    Otherwise, falls back to scanning existing verse files.
+    Requires a canonical YAML file (data/verses/<collection>.yaml) to exist.
+    Finds the first missing verse in the sequence.
 
     Returns:
-        Next verse position (1-based) to generate, or 1 if no verses exist
+        Next verse position (1-based) to generate, or None if canonical file missing
     """
-    # Try to use sequence from data file
+    # Require canonical YAML file for proper sequence
     sequence = get_verse_sequence(collection, project_dir)
-    if sequence:
-        # Find which verses in the sequence already have files
-        verses_dir = project_dir / "_verses" / collection
-        if not verses_dir.exists():
-            return 1  # Start from position 1
+    if not sequence:
+        print(f"✗ Error: Cannot use --next without canonical verse file", file=sys.stderr)
+        print(f"", file=sys.stderr)
+        print(f"The --next flag requires data/verses/{collection}.yaml to determine verse sequence.", file=sys.stderr)
+        print(f"", file=sys.stderr)
+        print(f"Options:", file=sys.stderr)
+        print(f"  1. Create canonical file: verse-add --collection {collection} --verse 1-10", file=sys.stderr)
+        print(f"  2. Run verse-validate --fix to create template", file=sys.stderr)
+        print(f"  3. Use explicit verse number: verse-generate --collection {collection} --verse 1", file=sys.stderr)
+        return None
 
-        # Check each position in the sequence
-        for position, verse_id in enumerate(sequence, start=1):
-            # Check if file exists for this verse_id
-            verse_file = verses_dir / f"{verse_id}.md"
-            if not verse_file.exists():
-                # Found first missing verse
-                return position
-
-        # All verses in sequence exist
-        return len(sequence) + 1
-
-    # Fallback: scan existing files (old behavior)
+    # Find which verses in the sequence already have files
     verses_dir = project_dir / "_verses" / collection
     if not verses_dir.exists():
-        return 1
+        return 1  # Start from position 1
 
-    verse_files = list(verses_dir.glob("*.md"))
-    if not verse_files:
-        return 1
+    # Check each position in the sequence
+    for position, verse_id in enumerate(sequence, start=1):
+        # Check if file exists for this verse_id
+        verse_file = verses_dir / f"{verse_id}.md"
+        if not verse_file.exists():
+            # Found first missing verse
+            return position
 
-    # Extract verse numbers from filenames
-    verse_numbers = []
-    for verse_file in verse_files:
-        match = re.search(r'[-_](\d+)\.md$', verse_file.name)
-        if match:
-            verse_numbers.append(int(match.group(1)))
-
-    if not verse_numbers:
-        return 1
-
-    return max(verse_numbers) + 1
+    # All verses in sequence exist - next would be beyond the sequence
+    print(f"✓ All {len(sequence)} verses in sequence already exist!", file=sys.stderr)
+    print(f"", file=sys.stderr)
+    print(f"Options:", file=sys.stderr)
+    print(f"  1. Add more verses to data/verses/{collection}.yaml", file=sys.stderr)
+    print(f"  2. Regenerate existing verse: verse-generate --collection {collection} --verse 1 --regenerate", file=sys.stderr)
+    return None
 
 
 def infer_verse_id(collection: str, verse_position: int, project_dir: Path = Path.cwd()) -> Optional[str]:

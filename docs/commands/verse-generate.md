@@ -30,8 +30,11 @@ You can opt-out of specific steps using `--no-update-embeddings` flag or generat
 
 - `--collection NAME` - Collection key (e.g., `hanuman-chalisa`, `sundar-kaand`)
 - `--verse N or M-N` - Verse number (e.g., `5`) or range (e.g., `1-10`, `5-20`) for batch processing
+  - **OR** use `--next` to auto-detect the next missing verse
 
 ### Optional
+
+- `--next` - Auto-detect and generate the next missing verse in sequence (requires canonical YAML file)
 
 - `--all` - Generate both image and audio (this is the default behavior if no flags specified)
 - `--image` - Generate image only
@@ -49,6 +52,31 @@ You can opt-out of specific steps using `--no-update-embeddings` flag or generat
 ```bash
 verse-generate --list-collections
 ```
+
+### Auto-Detect Next Missing Verse
+
+Generate the next verse that hasn't been implemented yet:
+
+```bash
+verse-generate --collection bhagavad-gita --next --all
+```
+
+**How it works:**
+1. Reads the canonical verse sequence from `data/verses/bhagavad-gita.yaml`
+2. Checks which verses already have files in `_verses/bhagavad-gita/`
+3. Finds the **first missing verse** (lowest number not yet implemented)
+4. Generates all content for that verse
+
+**Example:**
+- Canonical file has verses: 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
+- Existing files: verse-01.md, verse-02.md, verse-03.md, verse-06.md, verse-07.md
+- Missing: verse-04, verse-05, verse-08, verse-09, verse-10
+- `--next` will generate: **verse-04** (first missing)
+
+**Requirements:**
+- Canonical YAML file must exist at `data/verses/<collection>.yaml`
+- File defines the proper verse sequence
+- If file is missing, use `verse-add` or `verse-validate --fix` to create it
 
 ### Complete Workflow (Default)
 
