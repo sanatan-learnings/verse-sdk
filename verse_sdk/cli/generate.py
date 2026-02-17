@@ -967,10 +967,15 @@ def list_collections(project_dir: Path = Path.cwd()):
 
 def get_verse_sequence(collection: str, project_dir: Path = Path.cwd()) -> Optional[list]:
     """
-    Read the verse sequence from the data file's _meta.sequence list.
+    Read the verse sequence from the data file.
+
+    Supports multiple formats:
+    1. _meta.sequence - explicit list of verse IDs
+    2. Bhagavad Gita format - generates sequence from chapter structure
+    3. Fallback - extracts verse IDs from YAML keys (excluding _meta)
 
     Args:
-        collection: Collection key (e.g., "sundar-kaand")
+        collection: Collection key (e.g., "sundar-kaand", "bhagavad-gita")
         project_dir: Project directory (defaults to current working directory)
 
     Returns:
@@ -991,11 +996,47 @@ def get_verse_sequence(collection: str, project_dir: Path = Path.cwd()) -> Optio
         if not data:
             return None
 
-        # Check for _meta.sequence
+        # Method 1: Check for explicit _meta.sequence
         if '_meta' in data and isinstance(data['_meta'], dict):
             sequence = data['_meta'].get('sequence')
             if sequence and isinstance(sequence, list):
                 return sequence
+
+            # Method 2: Check for Bhagavad Gita chapter structure
+            # Format: chapter-XX-verse-YY with known chapter verse counts
+            if data['_meta'].get('chapters') and data['_meta'].get('total_verses'):
+                # Bhagavad Gita: 18 chapters with specific verse counts
+                chapter_verse_counts = {
+                    1: 47, 2: 72, 3: 43, 4: 42, 5: 29, 6: 47,
+                    7: 30, 8: 28, 9: 34, 10: 42, 11: 55, 12: 20,
+                    13: 35, 14: 27, 15: 20, 16: 24, 17: 28, 18: 78
+                }
+
+                sequence = []
+                for chapter in range(1, data['_meta']['chapters'] + 1):
+                    verse_count = chapter_verse_counts.get(chapter, 0)
+                    if verse_count == 0:
+                        # If we don't have the count, try to infer from existing verses
+                        # or skip this chapter
+                        continue
+
+                    for verse in range(1, verse_count + 1):
+                        verse_id = f"chapter-{chapter:02d}-verse-{verse:02d}"
+                        sequence.append(verse_id)
+
+                if sequence:
+                    return sequence
+
+        # Method 3: Fallback - extract verse IDs from YAML keys (sorted)
+        verse_ids = [k for k in data.keys() if not k.startswith('_')]
+        if verse_ids:
+            # Sort by extracting numbers from verse IDs
+            def sort_key(verse_id):
+                numbers = re.findall(r'\d+', verse_id)
+                return [int(n) for n in numbers]
+
+            verse_ids.sort(key=sort_key)
+            return verse_ids
 
         return None
 
