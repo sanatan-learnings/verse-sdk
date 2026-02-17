@@ -1,6 +1,6 @@
 # Usage Guide
 
-Comprehensive guide for using sanatan-sdk to generate multimedia content for spiritual text collections.
+Comprehensive guide for using verse-sdk to generate multimedia content for spiritual text collections.
 
 ## Table of Contents
 
@@ -14,12 +14,12 @@ Comprehensive guide for using sanatan-sdk to generate multimedia content for spi
 
 ## Quick Start
 
-Get started with sanatan-sdk in minutes!
+Get started with verse-sdk in minutes!
 
 ### 1. Install
 
 ```bash
-pip install sanatan-sdk
+pip install verse-sdk
 ```
 
 ### 2. Initialize Project with Collection

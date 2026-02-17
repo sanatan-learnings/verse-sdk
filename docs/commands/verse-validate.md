@@ -1,6 +1,6 @@
 # verse-validate
 
-Validate project structure and configuration for sanatan-sdk projects.
+Validate project structure and configuration for verse-sdk projects.
 
 ## Synopsis
 
@@ -303,8 +303,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: '3.9'
-      - name: Install sanatan-sdk
-        run: pip install sanatan-sdk
+      - name: Install verse-sdk
+        run: pip install verse-sdk
       - name: Validate structure
         run: verse-validate
 ```
