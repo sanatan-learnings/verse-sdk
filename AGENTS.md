@@ -13,14 +13,38 @@ When the user asks to publish to PyPI, follow these steps:
 
 ### 2. Publishing Process
 
-Run the interactive publish script:
+The `scripts/publish.sh` script now supports both interactive and automated modes.
+
+#### Automated Mode (Recommended for Agents)
+
+For typical releases (use current version, skip TestPyPI, auto-approve):
+```bash
+bash scripts/publish.sh --yes --skip-testpypi
+```
+
+For releases with version bump:
+```bash
+bash scripts/publish.sh --version 0.25.0 --yes --skip-testpypi
+```
+
+#### CLI Options
+
+- `--yes` / `-y` - Auto-approve all prompts (skip TestPyPI, approve PyPI, create tag)
+- `--skip-testpypi` - Skip TestPyPI upload
+- `--no-tag` - Don't create git tag after publishing
+- `--version X.Y.Z` - Set specific version (skips version prompt)
+- `--help` / `-h` - Show help message
+
+#### Interactive Mode (Legacy)
+
+Run without arguments to use interactive prompts:
 ```bash
 bash scripts/publish.sh
 ```
 
-### 3. Typical Answers
+### 3. Typical Answers (Interactive Mode Only)
 
-When asked the questions, use these typical answers (unless user specifies otherwise):
+When running in interactive mode, use these typical answers:
 
 1. **"Do you want to update the version?"**
    - Answer: **No** (version should already be updated in setup.py before publishing)
@@ -42,21 +66,39 @@ After successful publish:
 - Provide the GitHub releases link for creating a release
 - Confirm the installation command: `pip install sanatan-sdk`
 
-### Example Workflow
+### Example Workflows
 
+#### Automated Publishing (Recommended)
 ```bash
 # 1. User requests: "publish to PyPI"
 
-# 2. Agent asks interactive questions (using AskUserQuestion tool)
+# 2. Agent runs automated publish script:
+bash scripts/publish.sh --yes --skip-testpypi
 
-# 3. Agent executes:
-rm -rf dist/ build/ verse_sdk.egg-info/
+# 3. Script automatically:
+#    - Uses current version from setup.py
+#    - Cleans old builds
+#    - Builds package
+#    - Uploads to PyPI
+#    - Creates and pushes git tag
+
+# 4. Agent provides links and confirmation
+```
+
+#### Manual Steps (If Script Unavailable)
+```bash
+# 1. Clean and build
+rm -rf dist/ build/ verse_sdk.egg-info/ sanatan_sdk.egg-info/
 python -m build
+
+# 2. Upload to PyPI
 python -m twine upload dist/*
+
+# 3. Create git tag
 git tag -a "vX.Y.Z" -m "Release version X.Y.Z"
 git push origin vX.Y.Z
 
-# 4. Agent provides links and confirmation
+# 4. Provide confirmation
 ```
 
 ## Version Bumping
