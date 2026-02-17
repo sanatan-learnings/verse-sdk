@@ -178,15 +178,20 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
             skipped += 1
         else:
             existing_verses[verse_id] = {
-                'devanagari': '# Add Devanagari text here',
-                'transliteration': '# Add transliteration here (optional)',
+                'devanagari': ''
             }
             print(f"  ✓ Added {verse_id} to {yaml_file.name}")
             added += 1
 
-    # Write back to file (sorted by key)
-    with open(yaml_file, 'w') as f:
-        yaml.dump(existing_verses, f, default_flow_style=False, allow_unicode=True, sort_keys=True)
+    # Write back to file preserving formatting
+    with open(yaml_file, 'w', encoding='utf-8') as f:
+        # Use custom YAML dumper to preserve formatting
+        yaml.dump(existing_verses, f,
+                 default_flow_style=False,
+                 allow_unicode=True,
+                 sort_keys=True,
+                 width=1000,  # Prevent line wrapping
+                 default_style=None)
 
     return added, skipped, format_used
 
