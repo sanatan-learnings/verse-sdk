@@ -4,7 +4,7 @@ Verse Content SDK
 A Python SDK for generating rich multimedia content for verse-based texts.
 """
 
-__version__ = "0.25.2"
+__version__ = "0.25.3"
 
 # Note: Import only what exists to avoid circular imports
 # from .embeddings import EmbeddingGenerator
