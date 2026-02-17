@@ -13,7 +13,7 @@ verse-generate --collection COLLECTION --verse M-N [OPTIONS]  # Batch processing
 
 The `verse-generate` command is a complete orchestrator for verse content generation. **By default**, it executes the multimedia workflow:
 - Reads canonical Devanagari text from local sources
-- Automatically generates scene descriptions using GPT-4 (saved to `docs/image-prompts/<collection>.md`)
+- Automatically generates scene descriptions using GPT-4 (saved to `data/scenes/<collection>.md`)
 - Generates images using DALL-E 3 based on scene descriptions
 - Generates audio pronunciations using ElevenLabs (full-speed and slow-speed)
 - Updates vector embeddings for semantic search
@@ -60,7 +60,7 @@ verse-generate --collection hanuman-chalisa --verse 15
 
 This automatically:
 1. Reads canonical Devanagari text from local source
-2. Generates scene description using GPT-4 (saved to `docs/image-prompts/hanuman-chalisa.md`)
+2. Generates scene description using GPT-4 (saved to `data/scenes/hanuman-chalisa.md`)
 3. Generates DALL-E 3 image using scene description (modern-minimalist theme)
 4. Generates full-speed audio pronunciation
 5. Generates slow-speed audio pronunciation (0.75x)
@@ -158,7 +158,7 @@ verse-generate --collection sankat-mochan-hanumanashtak --verse 7
 
 When using `--all` (default), the command creates:
 
-1. **Scene description**: `docs/image-prompts/<collection-key>.md`
+1. **Scene description**: `data/scenes/<collection-key>.md`
    - Automatically generated using GPT-4 from canonical Devanagari text
    - Always regenerated to ensure consistency with source text
    - Format: `### Verse N: title` followed by `**Scene Description:**`
@@ -206,7 +206,7 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 ## Requirements
 
 - **For --image**: `OPENAI_API_KEY` + theme config in `data/themes/<collection-key>/<theme-name>.yml`
-  - Scene descriptions are automatically generated in `docs/image-prompts/<collection-key>.md` if they don't exist
+  - Scene descriptions are automatically generated in `data/scenes/<collection-key>.md` if they don't exist
 - **For --audio**: `ELEVENLABS_API_KEY` + verse file with `devanagari:` field
 - **For --regenerate-content**: `OPENAI_API_KEY` + canonical text in `data/verses/<collection>.yaml`
 - **For --update-embeddings**: `OPENAI_API_KEY` for generating vector embeddings
@@ -216,7 +216,7 @@ verse-generate --collection hanuman-chalisa --verse 15 --audio
 
 - **Default behavior**: Complete workflow - generates image + audio with `modern-minimalist` theme, updates embeddings
 - **Batch processing**: Use range syntax `--verse M-N` to generate multiple verses (e.g., `1-10`, `5-20`)
-- **Scene descriptions**: Automatically generated using GPT-4 and saved to `docs/image-prompts/<collection-key>.md`
+- **Scene descriptions**: Automatically generated using GPT-4 and saved to `data/scenes/<collection-key>.md`
   - Scene descriptions are always regenerated from the canonical Devanagari text for consistency
 - Use `--no-update-embeddings` to skip embeddings update (faster, but search won't include these verses)
 - Use `--image` or `--audio` to generate only specific components

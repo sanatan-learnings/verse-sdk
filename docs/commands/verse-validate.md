@@ -66,6 +66,8 @@ verse-validate --fix --dry-run
 #   → Would create data/themes/
 #   → Would create .env.example
 #   → Would create _data/collections.yml
+#   → Would rename hanuman-chalisa/verse_01.md → verse-01.md
+#   → Would rename hanuman-chalisa/verse_02.md → verse-02.md
 ```
 
 See what would be fixed without actually making changes.
@@ -80,11 +82,17 @@ verse-validate --fix
 #   ✓ Created data/themes/
 #   ✓ Created .env.example
 #   ✓ Created _data/collections.yml
+#   ✓ Renamed hanuman-chalisa/verse_01.md → verse-01.md
+#   ✓ Renamed hanuman-chalisa/verse_02.md → verse-02.md
 ```
 
 Creates missing:
 - Required directories (`_data`, `_verses`, `data`)
 - Template files (`.env.example`, `_data/collections.yml`)
+
+Automatically migrates:
+- Verse filenames from underscore format (`verse_01.md`) to dash format (`verse-01.md`)
+- Safe: Skips if target filename already exists
 
 ### Validate Specific Collection
 
@@ -151,7 +159,7 @@ For each enabled collection:
    - Theme YAML files exist
 
 4. **Scene Descriptions**
-   - `docs/image-prompts/<collection>.md` (auto-generated if missing)
+   - `data/scenes/<collection>.md` (auto-generated if missing)
 
 ## Exit Codes
 

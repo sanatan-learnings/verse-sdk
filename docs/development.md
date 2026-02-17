@@ -175,7 +175,7 @@ mkdir -p ~/test-verse-project
 cd ~/test-verse-project
 
 # Set up basic structure
-mkdir -p _data _verses/hanuman-chalisa docs/image-prompts data/themes/hanuman-chalisa
+mkdir -p _data _verses/hanuman-chalisa data/scenes data/themes/hanuman-chalisa
 
 # Create collections.yml
 cat > _data/collections.yml << EOF
@@ -305,7 +305,7 @@ To add support for a new verse collection:
 The image generation uses DALL-E 3. Key files:
 - `verse_sdk/images/generate_theme_images.py` - Main logic
 - Theme files in user project: `data/themes/{collection}/{theme}.yml`
-- Prompts in user project: `docs/image-prompts/{collection}.md`
+- Scene descriptions in user project: `data/scenes/{collection}.yml`
 
 ### Modifying Audio Generation
 

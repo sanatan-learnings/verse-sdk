@@ -123,8 +123,8 @@ Verse collection project powered by [Sanatan SDK](https://github.com/sanatan-lea
 │   │   └── <collection-key>/    # Theme configurations
 │   └── verses/
 │       └── <collection>.yaml    # Canonical verse text
-├── docs/
-│   └── image-prompts/           # AI-generated scene descriptions
+├── data/
+│   └── scenes/                  # Scene descriptions for image generation
 ├── images/                      # Generated images (gitignored)
 ├── audio/                       # Generated audio (gitignored)
 └── .env                         # API keys (gitignored)
@@ -174,7 +174,7 @@ def create_directory_structure(base_path: Path, minimal: bool = False) -> None:
         "_verses",
         "data/themes",
         "data/verses",
-        "docs/image-prompts",
+        "data/scenes",
     ]
 
     # Optional directories (created automatically by commands, but good to have)
@@ -309,32 +309,27 @@ verse-03:
         theme_file.write_text(EXAMPLE_THEME_YML)
         print(f"✓ Created data/themes/{collection}/modern-minimalist.yml")
 
-    # Create sample scene descriptions file
-    scenes_file = base_path / "docs" / "image-prompts" / f"{collection}.md"
+    # Create sample scene descriptions file (YAML format in data/scenes/)
+    scenes_file = base_path / "data" / "scenes" / f"{collection}.yml"
     scenes_file.parent.mkdir(parents=True, exist_ok=True)
     if not scenes_file.exists():
-        scenes_content = f"""# {collection.replace('-', ' ').title()} - Scene Descriptions
+        scenes_content = f"""# Scene descriptions for {collection.replace('-', ' ').title()}
+#
+# Format: verse ID as key, scene description as value
+# Be specific and concrete - describe what should be visible in the image
+# Include: setting, characters, poses, lighting, mood, and visual elements
 
-Scene descriptions for image generation. Each verse should have a detailed visual description.
+verse-01: |
+  [Add detailed scene description here]
 
-## Verse 1
+verse-02: |
+  [Add scene description for verse 2]
 
-**Scene Description**:
-[Add detailed scene description here. Include setting, characters, poses, lighting, mood, and visual elements.
-Be specific and concrete - describe what should be visible in the image.]
-
-## Verse 2
-
-**Scene Description**:
-[Add scene description for verse 2]
-
-## Verse 3
-
-**Scene Description**:
-[Add scene description for verse 3]
+verse-03: |
+  [Add scene description for verse 3]
 """
         scenes_file.write_text(scenes_content)
-        print(f"✓ Created docs/image-prompts/{collection}.md")
+        print(f"✓ Created data/scenes/{collection}.yml")
 
     # Update collections.yml
     collections_file = base_path / "_data" / "collections.yml"
@@ -361,7 +356,7 @@ Be specific and concrete - describe what should be visible in the image.]
     print(f"   1. Add canonical text to data/verses/{collection}.yaml")
     print(f"   2. Edit verse files in _verses/{collection}/")
     print(f"   3. Customize theme in data/themes/{collection}/modern-minimalist.yml")
-    print(f"   4. Add scene descriptions in docs/image-prompts/{collection}.md")
+    print(f"   4. Add scene descriptions in data/scenes/{collection}.yml")
 
 
 def init_project(

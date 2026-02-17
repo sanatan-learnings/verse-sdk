@@ -91,7 +91,7 @@ verse-init --project-name my-project \
 - ✅ Sample verse files: `_verses/<collection>/verse-01.md`, `verse-02.md`, etc.
 - ✅ Canonical text template: `data/verses/<collection>.yaml`
 - ✅ Sample theme: `data/themes/<collection>/modern-minimalist.yml`
-- ✅ Scene descriptions template: `docs/image-prompts/<collection>.md`
+- ✅ Scene descriptions template: `data/scenes/<collection>.md`
 - ✅ Collection entry in `_data/collections.yml`
 
 ## Created Structure

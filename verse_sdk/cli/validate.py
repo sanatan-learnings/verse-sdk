@@ -64,7 +64,7 @@ class ProjectValidator:
         optional_dirs = {
             "data/themes": "Theme configurations (created as needed per collection)",
             "data/verses": "Canonical verse YAML files",
-            "docs/image-prompts": "Scene descriptions for image generation",
+            "data/scenes": "Scene descriptions for image generation (YAML format)",
             "images": "Generated images (created automatically)",
             "audio": "Generated audio files (created automatically)",
         }
@@ -194,15 +194,17 @@ class ProjectValidator:
         else:
             results['warnings'].append(f"⚠️  data/themes/{collection_key}/ not found - needed for image generation")
 
-        # Check image prompts
-        prompt_files = [
-            self.project_dir / "docs" / "image-prompts" / f"{collection_key}.md",
+        # Check scene descriptions (YAML format in data/scenes/)
+        scene_files = [
+            self.project_dir / "data" / "scenes" / f"{collection_key}.yml",
+            self.project_dir / "data" / "scenes" / f"{collection_key}.yaml",
         ]
-        prompt_found = any(pf.exists() for pf in prompt_files)
-        if prompt_found:
-            results['successes'].append(f"✅ Scene descriptions file exists: docs/image-prompts/{collection_key}.md")
+        scene_found = any(sf.exists() for sf in scene_files)
+        if scene_found:
+            scene_file = next((sf for sf in scene_files if sf.exists()), None)
+            results['successes'].append(f"✅ Scene descriptions file exists: data/scenes/{scene_file.name}")
         else:
-            results['warnings'].append(f"⚠️  docs/image-prompts/{collection_key}.md not found - auto-generated when needed")
+            results['warnings'].append(f"⚠️  data/scenes/{collection_key}.yml not found - needed for image generation")
 
         return results
 
@@ -262,7 +264,7 @@ class ProjectValidator:
         prefix = "Would create" if dry_run else "Created"
 
         # Create missing required directories
-        required_dirs = ["_data", "_verses", "data", "data/themes", "data/verses"]
+        required_dirs = ["_data", "_verses", "data", "data/themes", "data/verses", "data/scenes"]
         for dir_name in required_dirs:
             dir_path = self.project_dir / dir_name
             if not dir_path.exists():
@@ -302,6 +304,26 @@ ELEVENLABS_API_KEY=your_elevenlabs_key_here
 """
                 collections_file.write_text(content)
             actions.append(f"{prefix} _data/collections.yml")
+
+        # Rename verse files from underscore to dash format
+        verses_dir = self.project_dir / "_verses"
+        if verses_dir.exists():
+            rename_prefix = "Would rename" if dry_run else "Renamed"
+            for collection_dir in verses_dir.iterdir():
+                if collection_dir.is_dir():
+                    for verse_file in collection_dir.glob("*_*.md"):
+                        # Convert underscores to dashes in filename
+                        old_name = verse_file.name
+                        new_name = old_name.replace('_', '-')
+                        new_path = verse_file.parent / new_name
+
+                        # Check if target already exists
+                        if new_path.exists():
+                            actions.append(f"⚠️  Skipped {collection_dir.name}/{old_name} (target {new_name} already exists)")
+                        else:
+                            if not dry_run:
+                                verse_file.rename(new_path)
+                            actions.append(f"{rename_prefix} {collection_dir.name}/{old_name} → {new_name}")
 
         return actions
 

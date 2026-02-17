@@ -10,7 +10,7 @@ verse-images --collection COLLECTION --theme THEME [OPTIONS]
 
 ## Description
 
-The `verse-images` command generates artwork for verses using OpenAI's DALL-E 3 API. It reads scene descriptions from `docs/image-prompts/<collection-key>.md` and creates images styled according to a theme configuration.
+The `verse-images` command generates artwork for verses using OpenAI's DALL-E 3 API. It reads scene descriptions from `data/scenes/<collection-key>.md` and creates images styled according to a theme configuration.
 
 ## Options
 
@@ -40,7 +40,7 @@ verse-images --list-collections
 verse-images --collection hanuman-chalisa --theme modern-minimalist
 ```
 
-This reads all scene descriptions from `docs/image-prompts/hanuman-chalisa.md` and generates images that don't already exist.
+This reads all scene descriptions from `data/scenes/hanuman-chalisa.md` and generates images that don't already exist.
 
 ### Generate Specific Verse
 
@@ -108,7 +108,7 @@ Example paths:
 
 ## Scene Descriptions
 
-Scene descriptions are stored per collection in `docs/image-prompts/<collection-key>.md`:
+Scene descriptions are stored per collection in `data/scenes/<collection-key>.md`:
 
 ```markdown
 ### Verse 1
@@ -121,8 +121,8 @@ raised in blessing. [...]
 ```
 
 Example paths:
-- `docs/image-prompts/hanuman-chalisa.md`
-- `docs/image-prompts/sundar-kaand.md`
+- `data/scenes/hanuman-chalisa.md`
+- `data/scenes/sundar-kaand.md`
 
 ### Writing Good Scene Descriptions
 
@@ -159,7 +159,7 @@ quality: standard
 style: natural
 EOF
 
-# 2. Add scene descriptions to docs/image-prompts/hanuman-chalisa.md
+# 2. Add scene descriptions to data/scenes/hanuman-chalisa.md
 # (Must be created manually with scene descriptions for each verse)
 
 # 3. Generate images
@@ -184,7 +184,7 @@ For 700 verses (complete Bhagavad Gita):
 ## Requirements
 
 - `OPENAI_API_KEY` environment variable
-- Scene descriptions in `docs/image-prompts/<collection-key>.md`
+- Scene descriptions in `data/scenes/<collection-key>.md`
 - Theme configuration in `data/themes/<collection-key>/<theme-name>.yml`
 - Collection enabled in `_data/collections.yml`
 

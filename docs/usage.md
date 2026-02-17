@@ -191,7 +191,7 @@ your-project/
 1. **Collection Keys**: Use kebab-case (e.g., `hanuman-chalisa`, `sundar-kaand`)
 2. **Verse Files**: Named `verse-NN.md` or custom names like `chaupai-NN.md` (dash-separated)
    - Legacy underscore format (`verse_NN.md`) is still supported for backward compatibility
-3. **Image Prompts**: One file per collection in `docs/image-prompts/<collection-key>.md`
+3. **Image Prompts**: One file per collection in `data/scenes/<collection-key>.md`
 4. **Theme Files**: One YAML file per theme in `data/themes/<collection-key>/<theme-name>.yml`
 5. **Collections Registry**: Define all collections in `_data/collections.yml` with `enabled: true`
 
@@ -629,7 +629,7 @@ cat _data/collections.yml
 ```
 
 ### Image Generation Fails
-- Check prompt file exists: `docs/image-prompts/<collection-key>.md`
+- Check prompt file exists: `data/scenes/<collection-key>.md`
 - Verify theme file exists: `data/themes/<collection-key>/<theme-name>.yml`
 - Review OpenAI API quota
 

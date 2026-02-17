@@ -100,7 +100,7 @@ API key is incorrect or expired.
 
 ### "Error: Scene description not found"
 
-Trying to generate image but scene description file doesn't exist in `docs/image-prompts/<collection>.md`.
+Trying to generate image but scene description file doesn't exist in `data/scenes/<collection>.yml`.
 
 **Solution**:
 
@@ -108,9 +108,9 @@ Create the scene description file:
 
 ```bash
 # Create scene description file for your collection
-touch docs/image-prompts/hanuman-chalisa.md
+touch data/scenes/hanuman-chalisa.yml
 
-# Add scene descriptions for each verse
+# Add scene descriptions for each verse in YAML format
 # Then generate image
 verse-generate --collection hanuman-chalisa --verse 5 --image
 ```
