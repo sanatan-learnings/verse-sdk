@@ -10,20 +10,26 @@ This command is the one-stop solution for generating all content for a verse:
 - Update vector embeddings for semantic search
 
 Usage:
-    # Generate everything for a verse
-    verse-generate --collection hanuman-chalisa --verse 15 --all --theme modern-minimalist --update-embeddings
+    # Generate everything for a verse (default: image + audio + embeddings)
+    verse-generate --collection hanuman-chalisa --verse 15
 
-    # Regenerate AI content from canonical source
+    # Regenerate AI content only (no multimedia)
     verse-generate --collection sundar-kaand --verse 3 --regenerate-content
 
-    # Regenerate content and multimedia
-    verse-generate --collection sundar-kaand --verse 3 --regenerate-content --all
+    # Regenerate content + image
+    verse-generate --collection sundar-kaand --verse 3 --regenerate-content --image
+
+    # Regenerate content + image + audio
+    verse-generate --collection sundar-kaand --verse 3 --regenerate-content --image --audio
 
     # Generate only image
-    verse-generate --collection sundar-kaand --verse 3 --image --theme modern-minimalist
+    verse-generate --collection sundar-kaand --verse 3 --image
 
     # Generate only audio
-    verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
+    verse-generate --collection sundar-kaand --verse 5 --audio
+
+    # Generate image + embeddings (no audio)
+    verse-generate --collection sundar-kaand --verse 5 --image --embeddings
 
 Requirements:
     - OPENAI_API_KEY environment variable (for content generation, image generation, and embeddings)
@@ -2047,8 +2053,8 @@ Examples:
   # Skip embeddings update (faster, but search won't include this verse)
   verse-generate --collection hanuman-chalisa --verse 15 --no-update-embeddings
 
-  # Just regenerate media (no embeddings update)
-  verse-generate --collection hanuman-chalisa --verse 15 --no-update-embeddings
+  # Generate everything (default: image + audio + embeddings)
+  verse-generate --collection hanuman-chalisa --verse 15
 
   # Generate only image
   verse-generate --collection sundar-kaand --verse 3 --image
@@ -2056,14 +2062,23 @@ Examples:
   # Generate only audio
   verse-generate --collection sankat-mochan-hanumanashtak --verse 5 --audio
 
+  # Generate image + audio (no embeddings)
+  verse-generate --collection sundar-kaand --verse 3 --image --audio
+
   # Auto-generate next verse after the last generated verse
-  verse-generate --collection sundar-kaand --next --all
+  verse-generate --collection sundar-kaand --next
 
   # Regenerate AI content only (no multimedia)
   verse-generate --collection sundar-kaand --verse 3 --regenerate-content
 
-  # Regenerate content AND multimedia
-  verse-generate --collection sundar-kaand --verse 3 --regenerate-content --all
+  # Regenerate content + image
+  verse-generate --collection sundar-kaand --verse 3 --regenerate-content --image
+
+  # Regenerate content + image + audio
+  verse-generate --collection sundar-kaand --verse 3 --regenerate-content --image --audio
+
+  # Regenerate content + all multimedia
+  verse-generate --collection sundar-kaand --verse 3 --regenerate-content --image --audio --embeddings
 
   # Override auto-detected verse ID (only needed when not using sequence)
   verse-generate --collection sundar-kaand --verse 5 --verse-id chaupai-05
@@ -2077,10 +2092,10 @@ Note:
   - If data file has sequence, verse ID is mapped from sequence (e.g., position 15 → chaupai-11)
   - If no sequence exists, falls back to old behavior (scanning existing files)
   - Use --next to auto-generate the next verse in the sequence
-  - Complete workflow by default: generates image + audio, updates embeddings
+  - Default behavior: generates image + audio + embeddings
   - Use --regenerate-content ALONE to only regenerate text (no multimedia)
-  - Use --regenerate-content --all to regenerate text AND multimedia
-  - Use --no-update-embeddings to skip embeddings (faster generation)
+  - Add --image, --audio, or --embeddings to include specific media
+  - Flags can be combined: --image --audio --embeddings
   - Theme defaults to "modern-minimalist" (use --theme to change)
 
 Environment Variables:
@@ -2117,22 +2132,22 @@ Environment Variables:
     → Verify verse file exists in _verses/{collection}/{verse-id}.md
 
 📊 Batch Processing Examples:
-  # Generate verses 1-10
-  verse-generate --collection sundar-kaand --verse 1-10 --all
+  # Generate verses 1-10 (everything by default)
+  verse-generate --collection sundar-kaand --verse 1-10
 
   # Generate verses 15-20 without embeddings (faster)
-  verse-generate --collection sundar-kaand --verse 15-20 --all --no-update-embeddings
+  verse-generate --collection sundar-kaand --verse 15-20 --image --audio
 
   # Regenerate content for verses 1-5 (no multimedia)
   verse-generate --collection sundar-kaand --verse 1-5 --regenerate-content
 
   # Generate all remaining verses starting from position 21
   for i in {21..50}; do
-    verse-generate --collection sundar-kaand --verse $i --all || break
+    verse-generate --collection sundar-kaand --verse $i || break
   done
 
   # Generate next verse in sequence (auto-detect)
-  verse-generate --collection sundar-kaand --next --all
+  verse-generate --collection sundar-kaand --next
 
 💰 Cost Estimates (per verse):
   Content Generation (GPT-4):
@@ -2195,36 +2210,36 @@ Environment Variables:
         help="Auto-detect and generate the next verse after the last generated verse"
     )
 
-    # Content types
-    parser.add_argument(
-        "--all",
-        action="store_true",
-        help="Generate both image and audio (default if no flags specified)"
-    )
+    # Content types (can be combined)
     parser.add_argument(
         "--image",
         action="store_true",
-        help="Generate image only"
+        help="Generate image with DALL-E 3"
     )
     parser.add_argument(
         "--audio",
         action="store_true",
-        help="Generate audio pronunciation only"
+        help="Generate audio pronunciation with ElevenLabs"
+    )
+    parser.add_argument(
+        "--embeddings",
+        dest="update_embeddings",
+        action="store_true",
+        help="Update vector embeddings for semantic search"
     )
 
-    # Additional operations (enabled by default)
+    # Legacy flag support
     parser.add_argument(
         "--update-embeddings",
         dest="update_embeddings",
         action="store_true",
-        default=True,
-        help="Update vector embeddings for semantic search (default: enabled)"
+        help=argparse.SUPPRESS  # Hidden, use --embeddings instead
     )
     parser.add_argument(
         "--no-update-embeddings",
         dest="update_embeddings",
         action="store_false",
-        help="Skip updating embeddings"
+        help=argparse.SUPPRESS  # Hidden, not needed with new design
     )
 
     # Content regeneration
@@ -2359,20 +2374,43 @@ Environment Variables:
         print(f"  verse-generate --collection {args.collection} --next")
         print()
         print("Available options:")
-        print("  --all      : Generate image + audio (default)")
-        print("  --image    : Generate image only")
-        print("  --audio    : Generate audio only")
+        print("  (no flags) : Generate image + audio + embeddings (default)")
+        print("  --image    : Generate image")
+        print("  --audio    : Generate audio")
+        print("  --embeddings : Update vector embeddings")
+        print("  --regenerate-content : Regenerate AI text content")
         print("  --theme <name> : Use a specific theme (default: modern-minimalist)")
+        print()
+        print("Flags can be combined:")
+        print("  --image --audio              : Generate image and audio")
+        print("  --regenerate-content --image : Regenerate text + image")
         print()
         print("For more help:")
         print("  verse-help")
         print()
         sys.exit(1)
 
-    # Default to --all if no generation flags specified
-    # BUT: if only --regenerate-content is specified, don't generate multimedia
-    if not any([args.all, args.image, args.audio, args.regenerate_content]):
-        args.all = True
+    # Determine what to generate
+    # New simpler design:
+    # - No flags = generate everything (image, audio, embeddings)
+    # - --regenerate-content alone = regenerate text only
+    # - --regenerate-content + media flags = regenerate text + specified media
+    # - Media flags alone = generate specified media only
+
+    has_media_flags = any([args.image, args.audio, args.update_embeddings])
+
+    if not has_media_flags and not args.regenerate_content:
+        # No flags specified: default to generating everything
+        generate_image_flag = True
+        generate_audio_flag = True
+        update_embeddings_flag = True
+    else:
+        # Use explicit flags
+        generate_image_flag = args.image
+        generate_audio_flag = args.audio
+        update_embeddings_flag = args.update_embeddings
+
+    regenerate_content_flag = args.regenerate_content
 
     # Validate collection
     if not validate_collection(args.collection):
@@ -2427,12 +2465,6 @@ Environment Variables:
         print("✗ Error: Cannot use --verse-id with verse ranges")
         print("The verse ID is auto-detected for each verse in the range")
         sys.exit(1)
-
-    # Determine what to generate
-    generate_image_flag = args.all or args.image
-    generate_audio_flag = args.all or args.audio
-    update_embeddings_flag = args.update_embeddings
-    regenerate_content_flag = args.regenerate_content
 
     # Display header
     print("\n" + "="*60)
