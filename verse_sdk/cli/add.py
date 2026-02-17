@@ -77,12 +77,37 @@ def detect_chapter_format(verse_keys: List[str]) -> Optional[Tuple[int, str]]:
     return None
 
 
-def infer_verse_format(existing_verses: dict) -> Tuple[str, str]:
+def infer_default_format_from_collection(collection_info: dict) -> Tuple[str, str]:
     """
-    Infer verse ID format from existing verses.
+    Infer default verse format from collection metadata.
+
+    Args:
+        collection_info: Collection configuration from collections.yml
+
+    Returns:
+        Tuple of (prefix, format_string) based on collection metadata
+    """
+    # Check if collection has chapters (multi-chapter format)
+    has_chapters = collection_info.get('chapters', 0) > 0
+
+    # Check for explicit verse_format hint
+    verse_format = collection_info.get('verse_format', 'shloka' if has_chapters else 'verse')
+
+    if has_chapters:
+        # Multi-chapter format: chapter-01-shloka-01
+        return f"chapter-01-{verse_format}", "{:02d}"
+    else:
+        # Simple format: verse-01 or chaupai-01
+        return verse_format, "{:02d}"
+
+
+def infer_verse_format(existing_verses: dict, collection_info: Optional[dict] = None) -> Tuple[str, str]:
+    """
+    Infer verse ID format from existing verses or collection metadata.
 
     Args:
         existing_verses: Dictionary of existing verse entries
+        collection_info: Optional collection configuration from collections.yml
 
     Returns:
         Tuple of (prefix, format_string)
@@ -90,38 +115,36 @@ def infer_verse_format(existing_verses: dict) -> Tuple[str, str]:
         e.g., ("chaupai", "{:d}") for chaupai-1, chaupai-2, etc.
         e.g., ("chapter-01-shloka", "{:02d}") for chapter-01-shloka-01
     """
-    if not existing_verses:
-        # Default format if no verses exist
-        return "verse", "{:02d}"
-
     # Get a sample verse key
-    sample_keys = list(existing_verses.keys())
+    sample_keys = list(existing_verses.keys()) if existing_verses else []
 
     # Filter out metadata keys (keys starting with _)
     verse_keys = [k for k in sample_keys if not k.startswith('_')]
 
-    if not verse_keys:
-        return "verse", "{:02d}"
+    if verse_keys:
+        # Analyze first verse key to infer pattern
+        first_key = verse_keys[0]
 
-    # Analyze first verse key to infer pattern
-    first_key = verse_keys[0]
+        # Try to parse pattern: prefix-number
+        match = re.match(r'^([a-z\-]+)-(\d+)$', first_key)
+        if match:
+            prefix = match.group(1)
+            number = match.group(2)
 
-    # Try to parse pattern: prefix-number
-    match = re.match(r'^([a-z\-]+)-(\d+)$', first_key)
-    if match:
-        prefix = match.group(1)
-        number = match.group(2)
+            # Determine if zero-padded
+            if len(number) > 1 and number[0] == '0':
+                # Zero-padded (e.g., 01, 02)
+                padding = len(number)
+                format_str = f"{{:0{padding}d}}"
+            else:
+                # No padding (e.g., 1, 2)
+                format_str = "{:d}"
 
-        # Determine if zero-padded
-        if len(number) > 1 and number[0] == '0':
-            # Zero-padded (e.g., 01, 02)
-            padding = len(number)
-            format_str = f"{{:0{padding}d}}"
-        else:
-            # No padding (e.g., 1, 2)
-            format_str = "{:d}"
+            return prefix, format_str
 
-        return prefix, format_str
+    # No existing verses - try to infer from collection metadata
+    if collection_info:
+        return infer_default_format_from_collection(collection_info)
 
     # Fallback to default
     return "verse", "{:02d}"
@@ -154,7 +177,7 @@ def get_collection_info(project_dir: Path, collection_key: str) -> dict:
     return collections[collection_key]
 
 
-def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: List[int], custom_format: Optional[str] = None, chapter: Optional[int] = None) -> Tuple[int, int, str]:
+def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: List[int], custom_format: Optional[str] = None, chapter: Optional[int] = None, collection_info: Optional[dict] = None) -> Tuple[int, int, str]:
     """
     Add verse placeholders to canonical YAML file.
 
@@ -164,6 +187,7 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
         verse_numbers: List of verse numbers to add
         custom_format: Optional custom format (overrides inferred format)
         chapter: Optional chapter number for chapter-based formats
+        collection_info: Optional collection configuration from collections.yml
 
     Returns:
         Tuple of (added_count, skipped_count, format_used)
@@ -188,7 +212,7 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
         yaml_file = project_dir / "data" / "verses" / f"{collection_key}.yaml"
         yaml_file.parent.mkdir(parents=True, exist_ok=True)
 
-    # Infer format from existing verses (unless custom format provided)
+    # Infer format from existing verses or collection metadata (unless custom format provided)
     if custom_format:
         # Parse custom format: "prefix-{format}"
         match = re.match(r'^([a-z\-]+)-(.+)$', custom_format)
@@ -197,9 +221,16 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
             format_str = match.group(2)
         else:
             print(f"Warning: Invalid custom format '{custom_format}', using inferred format")
-            prefix, format_str = infer_verse_format(existing_verses)
+            prefix, format_str = infer_verse_format(existing_verses, collection_info)
     else:
-        prefix, format_str = infer_verse_format(existing_verses)
+        prefix, format_str = infer_verse_format(existing_verses, collection_info)
+
+        # If format was inferred from collection metadata, inform the user
+        verse_keys = [k for k in existing_verses.keys() if not k.startswith('_')] if existing_verses else []
+        if not verse_keys and collection_info:
+            print(f"  ℹ️  No existing verses found. Using format from collection metadata.")
+            if collection_info.get('chapters', 0) > 0:
+                print(f"     Collection has {collection_info.get('chapters')} chapters - using chapter-based format")
 
     # Handle chapter-based formats
     verse_keys = [k for k in existing_verses.keys() if not k.startswith('_')]
@@ -390,7 +421,8 @@ For more information:
             args.collection,
             verse_numbers,
             custom_format,
-            chapter=args.chapter
+            chapter=args.chapter,
+            collection_info=collection_info
         )
 
         # Parse format for markdown creation
