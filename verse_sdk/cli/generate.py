@@ -328,6 +328,60 @@ class ProgressBar:
         self.update(self.current + 1, message)
 
 
+def extract_verse_marker(text: str) -> Optional[str]:
+    """
+    Extract Devanagari verse marker from text (e.g., ॥ १-१॥ or ॥१-१॥).
+
+    Args:
+        text: Text containing potential verse marker
+
+    Returns:
+        Devanagari verse marker if found, None otherwise
+    """
+    import re
+    # Match Devanagari verse markers: ॥ digits-digits ॥ or ॥digits-digits॥
+    # Also handles single verse numbers: ॥ १ ॥ or ॥१॥
+    pattern = r'॥\s*[०-९०-९\d]+(?:-[०-९\d]+)?\s*॥'
+    match = re.search(pattern, text)
+    return match.group(0) if match else None
+
+
+def normalize_transliteration_markers(transliteration: str, devanagari_text: str) -> str:
+    """
+    Ensure transliteration has consistent Devanagari verse markers.
+
+    Removes ASCII markers and ensures Devanagari markers from source are preserved.
+
+    Args:
+        transliteration: AI-generated transliteration
+        devanagari_text: Source Devanagari text with markers
+
+    Returns:
+        Transliteration with consistent Devanagari markers
+    """
+    import re
+
+    # Extract Devanagari marker from source
+    devanagari_marker = extract_verse_marker(devanagari_text)
+
+    if not devanagari_marker:
+        # No marker in source, return as-is
+        return transliteration
+
+    # Remove ASCII verse markers from transliteration (|| X-Y ||)
+    transliteration = re.sub(r'\|\|\s*\d+(?:-\d+)?\s*\|\|', '', transliteration)
+
+    # Check if transliteration already has Devanagari marker
+    if devanagari_marker in transliteration:
+        return transliteration.strip()
+
+    # Remove any existing Devanagari markers that might be different
+    transliteration = re.sub(r'॥\s*[०-९\d]+(?:-[०-९\d]+)?\s*॥', '', transliteration)
+
+    # Append the correct Devanagari marker
+    return f"{transliteration.strip()} {devanagari_marker}".strip()
+
+
 def generate_verse_content(devanagari_text: str, collection: str, verse_id: str = None,
                           dry_run: bool = False, cost_tracker: CostTracker = None) -> Tuple[dict, float]:
     """
@@ -389,6 +443,7 @@ English: [Title in English]
 Hindi: [शीर्षक हिंदी में]
 
 2. TRANSLITERATION (IAST format, single line, precisely matching the Devanagari):
+IMPORTANT: If the Devanagari text includes verse markers (॥ digits ॥), preserve them EXACTLY as they appear.
 [Your transliteration here]
 
 3. PHONETIC NOTES (for 2-3 key words that may be difficult to pronounce):
@@ -628,6 +683,13 @@ Format your response exactly as above with clear section headers."""
 
         # Set translation.en for backward compatibility (use literal or interpretive)
         result["translation"]["en"] = result["literal_translation"]["en"] or result["interpretive_meaning"]["en"]
+
+        # Normalize transliteration markers (ensure Devanagari markers are consistent)
+        if result["transliteration"]:
+            result["transliteration"] = normalize_transliteration_markers(
+                result["transliteration"],
+                devanagari_text
+            )
 
         print(f"  ✓ Generated complete verse content with titles, translations, story, and practical applications", file=sys.stderr)
         return result, cost
