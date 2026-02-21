@@ -19,12 +19,13 @@ Usage:
     verse-sync --collection sundar-kaand --fix-mismatches
 """
 
+import argparse
 import os
 import sys
-import argparse
-import yaml
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+import yaml
 
 try:
     from dotenv import load_dotenv
@@ -142,6 +143,8 @@ def get_mismatched_verses(collection: str, project_dir: Path) -> List[str]:
     try:
         from verse_sdk.cli.status import (
             analyze_collection,
+        )
+        from verse_sdk.cli.status import (
             load_normative_verses as load_norm,
         )
     except ImportError:
@@ -457,7 +460,7 @@ Note:
         print(f"Already synced: {result['total'] - result['updated'] - result['errors']}")
 
         if args.dry_run and result['updated'] > 0:
-            print(f"\n⚠️  This was a dry run. Run without --dry-run to apply changes.")
+            print("\n⚠️  This was a dry run. Run without --dry-run to apply changes.")
 
         print()
 

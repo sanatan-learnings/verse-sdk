@@ -4,6 +4,7 @@
 import sys
 from pathlib import Path
 
+
 def generate_embeddings(
     verses_dir: Path,
     output_file: Path,

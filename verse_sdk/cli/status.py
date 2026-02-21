@@ -30,15 +30,16 @@ Usage:
     verse-status --collection hanuman-chalisa --format json
 """
 
+import argparse
+import json
 import os
 import sys
-import argparse
-import yaml
-import json
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
+
+import yaml
 
 try:
     from dotenv import load_dotenv
@@ -452,7 +453,7 @@ def print_collection_status(analysis: Dict, detailed: bool = False, show_validat
     print(f"   Verses: {verse_count}")
     print(f"   Completion: {stats['completion_percentage']:.1f}% ({stats['verses_complete']}/{verse_count} verses)")
 
-    print(f"\n   Content Status:")
+    print("\n   Content Status:")
     print(f"   ├─ Devanagari text:  {stats['verses_with_devanagari']:3d}/{verse_count} verses")
     print(f"   ├─ Translation:      {stats['verses_with_translation']:3d}/{verse_count} verses")
     print(f"   ├─ Audio (full):     {stats['verses_with_audio_full']:3d}/{verse_count} verses")
@@ -464,7 +465,7 @@ def print_collection_status(analysis: Dict, detailed: bool = False, show_validat
         verses_with_validation = [v for v in analysis['verses'] if 'validation' in v]
 
         if verses_with_validation:
-            print(f"\n   Text Validation:")
+            print("\n   Text Validation:")
 
             # Count validation statuses
             validation_counts = defaultdict(int)
@@ -478,7 +479,7 @@ def print_collection_status(analysis: Dict, detailed: bool = False, show_validat
 
             # Show details if requested or if there are issues
             if detailed or validation_counts['mismatch'] > 0 or validation_counts['minor_diff'] > 0:
-                print(f"\n   Validation Details:")
+                print("\n   Validation Details:")
                 for verse in verses_with_validation:
                     verse_id = verse['verse_id']
                     validation = verse['validation']
@@ -505,11 +506,11 @@ def print_collection_status(analysis: Dict, detailed: bool = False, show_validat
                     elif status == 'mismatch':
                         print(f"   │  └─ Fix: verse-generate --collection {collection} --verse {verse_id.split('_')[-1]} --fetch-text")
         else:
-            print(f"\n   Text Validation:")
+            print("\n   Text Validation:")
             print(f"   └─ No normative source found (data/verses/{collection}.{{yaml,yml}})")
 
     if detailed and not show_validation:
-        print(f"\n   Verse Details:")
+        print("\n   Verse Details:")
         for verse in analysis['verses']:
             verse_id = verse['verse_id']
             audio_full = "✓" if verse['audio']['full'] else "✗"
@@ -536,7 +537,7 @@ def print_collection_status(analysis: Dict, detailed: bool = False, show_validat
 
 def print_embeddings_status(embeddings: Dict):
     """Print embeddings status."""
-    print(f"\n🔍 Embeddings Status:")
+    print("\n🔍 Embeddings Status:")
 
     if not embeddings['exists']:
         print("   ✗ No embeddings file found (data/embeddings.json)")
@@ -550,7 +551,7 @@ def print_embeddings_status(embeddings: Dict):
     print(f"   ✓ Total verses indexed: {embeddings['verse_count']}")
 
     if embeddings['collections']:
-        print(f"   Collections:")
+        print("   Collections:")
         for collection, count in embeddings['collections'].items():
             print(f"   ├─ {collection:30s} {count:3d} verses")
 
@@ -578,9 +579,9 @@ def print_summary(analyses: List[Dict], embeddings: Dict):
         missing = total_verses - indexed
         if missing > 0:
             print(f"⚠ Verses not in embeddings: {missing}")
-            print(f"  Run: verse-embeddings --multi-collection")
+            print("  Run: verse-embeddings --multi-collection")
         else:
-            print(f"✓ All verses indexed in embeddings")
+            print("✓ All verses indexed in embeddings")
 
 
 def main():

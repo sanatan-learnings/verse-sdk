@@ -17,13 +17,14 @@ Or as a script:
   python -m verse_sdk.embeddings.generate_embeddings_local --verses-dir _verses --output data/embeddings.json
 """
 
+import argparse
+import json
 import os
 import sys
-import json
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
 import yaml
-import argparse
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -75,7 +76,7 @@ def build_document(verse_data, lang='en'):
         parts.append(f"Transliteration: {verse_data['transliteration']}")
 
     # Literal Translation
-    lit_key = f'literal_translation'
+    lit_key = 'literal_translation'
     if lit_key in verse_data:
         lit_data = verse_data[lit_key]
         if isinstance(lit_data, dict) and lang in lit_data:
@@ -144,7 +145,7 @@ def process_verse_file(file_path, model):
     doc_hi = build_document(verse_data, 'hi')
 
     # Get embeddings (locally, no API calls)
-    print(f"  Generating embeddings...")
+    print("  Generating embeddings...")
     emb_en = model.encode(doc_en).tolist()
     emb_hi = model.encode(doc_hi).tolist()
 
@@ -196,7 +197,7 @@ def generate_embeddings(
     print("=" * 60)
     print(f"Model: {model_name}")
     print(f"Dimensions: {dimensions}")
-    print(f"Method: Local (sentence-transformers)")
+    print("Method: Local (sentence-transformers)")
     print(f"Verses directory: {verses_dir}")
     print(f"Output file: {output_file}")
     print()
@@ -260,7 +261,7 @@ def generate_embeddings(
     print(f"English embeddings: {len(verses_en)}")
     print(f"Hindi embeddings: {len(verses_hi)}")
     print(f"Output file size: {output_file.stat().st_size / 1024:.1f} KB")
-    print(f"Cost: FREE (generated locally)")
+    print("Cost: FREE (generated locally)")
     print()
 
 

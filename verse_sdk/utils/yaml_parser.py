@@ -1,8 +1,9 @@
 """YAML front matter parsing utilities."""
 
-import yaml
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
+import yaml
 
 
 def extract_yaml_frontmatter(file_path: Path) -> Optional[Dict[str, Any]]:

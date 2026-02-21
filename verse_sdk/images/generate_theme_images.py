@@ -26,15 +26,17 @@ Requirements:
     pip install openai requests pillow pyyaml
 """
 
-import os
-import sys
-import re
-import time
 import argparse
+import os
+import re
+import sys
+import time
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
+
 import requests
 from openai import OpenAI
+
 try:
     import yaml
 except ImportError:
@@ -314,7 +316,7 @@ class ImageGenerator:
 
         # Summary
         print(f"\n{'='*60}")
-        print(f"Generation complete!")
+        print("Generation complete!")
         print(f"✓ Successful: {successful}/{len(ordered_files)}")
         if failed:
             print(f"✗ Failed: {len(failed)}")
@@ -323,12 +325,12 @@ class ImageGenerator:
         print(f"{'='*60}\n")
 
         if successful == len(ordered_files):
-            print(f"🎉 All images generated successfully!")
-            print(f"\nNext steps:")
+            print("🎉 All images generated successfully!")
+            print("\nNext steps:")
             print(f"1. Review images in: {self.output_dir}")
-            print(f"2. Update _data/themes.yml with your new theme")
-            print(f"3. Test the theme on your local Jekyll site")
-            print(f"4. Commit and push to GitHub")
+            print("2. Update _data/themes.yml with your new theme")
+            print("3. Test the theme on your local Jekyll site")
+            print("4. Commit and push to GitHub")
 
 
 def validate_collection(collection: str, project_dir: Path = PROJECT_DIR) -> bool:
@@ -336,7 +338,7 @@ def validate_collection(collection: str, project_dir: Path = PROJECT_DIR) -> boo
     verses_dir = project_dir / "_verses" / collection
     if not verses_dir.exists():
         print(f"✗ Error: Collection directory not found: {verses_dir}")
-        print(f"\nAvailable collections:")
+        print("\nAvailable collections:")
         list_collections()
         return False
 

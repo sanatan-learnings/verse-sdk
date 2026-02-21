@@ -16,13 +16,14 @@ Usage:
     verse-add --collection hanuman-chalisa --verse 44 --markdown
 """
 
-import os
-import sys
 import argparse
-import yaml
+import os
 import re
+import sys
 from pathlib import Path
-from typing import List, Tuple, Optional
+from typing import List, Optional, Tuple
+
+import yaml
 
 
 def parse_verse_range(verse_arg: str) -> List[int]:
@@ -228,7 +229,7 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
         # If format was inferred from collection metadata, inform the user
         verse_keys = [k for k in existing_verses.keys() if not k.startswith('_')] if existing_verses else []
         if not verse_keys and collection_info:
-            print(f"  ℹ️  No existing verses found. Using format from collection metadata.")
+            print("  ℹ️  No existing verses found. Using format from collection metadata.")
             if collection_info.get('chapters', 0) > 0:
                 print(f"     Collection has {collection_info.get('chapters')} chapters - using chapter-based format")
 
@@ -247,8 +248,8 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
 
         print(f"  📖 Using chapter {chapter} (detected format: chapter-{chapter_format})")
     elif chapter and not chapter_info:
-        print(f"  ⚠️  Warning: --chapter flag provided but collection doesn't use chapter-based format")
-        print(f"     Ignoring --chapter flag")
+        print("  ⚠️  Warning: --chapter flag provided but collection doesn't use chapter-based format")
+        print("     Ignoring --chapter flag")
 
     format_used = f"{prefix}-{format_str}"
 
@@ -277,7 +278,7 @@ def add_verses_to_yaml(project_dir: Path, collection_key: str, verse_numbers: Li
             for i, verse_id in enumerate(new_verses):
                 # Write verse entry
                 f.write(f"{verse_id}:\n")
-                f.write(f"  devanagari: ''\n")
+                f.write("  devanagari: ''\n")
 
                 # Add blank line between verses (except after last)
                 if i < len(new_verses) - 1:
@@ -397,7 +398,7 @@ For more information:
         # Parse verse numbers
         try:
             verse_numbers = parse_verse_range(args.verse)
-        except ValueError as e:
+        except ValueError:
             print(f"Error: Invalid verse format '{args.verse}'. Use a number (e.g., 44) or range (e.g., 44-50)")
             sys.exit(1)
 
@@ -478,7 +479,7 @@ For more information:
             print(f"   {3 if md_created > 0 else 2}. Update total_verses in _data/collections.yml if needed")
             print(f"   {4 if md_created > 0 else 3}. Generate content: verse-generate --collection {args.collection} --verse {verse_numbers[0]}")
             if not args.markdown:
-                print(f"   Note: verse-generate will auto-create markdown files from YAML")
+                print("   Note: verse-generate will auto-create markdown files from YAML")
             print()
 
         sys.exit(0)

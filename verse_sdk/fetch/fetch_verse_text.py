@@ -6,13 +6,14 @@ This script reads verse text from local YAML files in data/verses/{collection}.y
 Canonical source files must be created manually to ensure text accuracy and quality.
 """
 
-import sys
-import re
-import json
 import argparse
-import yaml
+import json
+import re
+import sys
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Dict, Optional
+
+import yaml
 
 try:
     import requests
@@ -106,7 +107,7 @@ def fetch_from_ramcharitmanas_net(collection: str, verse_num: int, verse_type: s
                             text = clean_devanagari_text(text)
                             if text and len(text) > 10:  # Must have substantial content
                                 return text
-            except Exception as e:
+            except Exception:
                 continue
 
         return None
@@ -251,7 +252,7 @@ def fetch_verse_text(collection: str, verse_id: str) -> Dict[str, any]:
         "error": f"Canonical source not found. Please create data/verses/{collection}.yaml with verse text for '{verse_id}'",
         "collection": collection,
         "verse_id": verse_id,
-        "help": f"See docs/local-verses.md for format details"
+        "help": "See docs/local-verses.md for format details"
     }
 
 

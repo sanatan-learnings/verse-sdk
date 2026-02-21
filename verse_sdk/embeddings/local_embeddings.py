@@ -1,9 +1,9 @@
 """Local embedding generation using sentence-transformers."""
 
 import sys
-from pathlib import Path
-from typing import List, Dict, Any, Callable, Optional
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -12,7 +12,7 @@ except ImportError:
     print("Please install it with: pip install sentence-transformers")
     sys.exit(1)
 
-from ..utils import yaml_parser, file_utils
+from ..utils import file_utils, yaml_parser
 
 
 class LocalEmbeddingGenerator:
@@ -217,5 +217,5 @@ class LocalEmbeddingGenerator:
         for lang in languages:
             print(f"{lang.upper()} embeddings: {len(results['verses'][lang])}")
         print(f"Output file size: {file_utils.get_file_size_kb(output_file):.1f} KB")
-        print(f"Cost: FREE (generated locally)")
+        print("Cost: FREE (generated locally)")
         print()

@@ -11,8 +11,8 @@ Usage:
     verse-help --topic commands
 """
 
-import sys
 import argparse
+import sys
 from pathlib import Path
 
 

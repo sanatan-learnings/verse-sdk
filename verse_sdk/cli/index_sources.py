@@ -14,14 +14,15 @@ Usage:
     verse-index-sources --file data/sources/notes.md --provider bedrock-cohere
 """
 
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
-import yaml
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
+
+import yaml
 
 try:
     from importlib.metadata import version as _pkg_version
@@ -159,7 +160,7 @@ Extract Puranic episodes from this passage as a YAML list. Return [] if none."""
         if parsed is None:
             return []
         if not isinstance(parsed, list):
-            print(f"    Warning: Unexpected response format (not a list), skipping chunk", file=sys.stderr)
+            print("    Warning: Unexpected response format (not a list), skipping chunk", file=sys.stderr)
             return []
         return parsed
 
@@ -189,8 +190,9 @@ def embed_episodes(
     Text = summary_en + " " + summary_hi, input_type="search_document".
     Returns list of {"id": ..., "embedding": [...]} dicts.
     """
-    from verse_sdk.embeddings.generate_embeddings import get_bedrock_embedding
     import time
+
+    from verse_sdk.embeddings.generate_embeddings import get_bedrock_embedding
 
     results = []
     for i, ep in enumerate(episodes):

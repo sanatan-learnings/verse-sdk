@@ -23,12 +23,13 @@ Requirements:
     - OPENAI_API_KEY environment variable (for translation)
 """
 
+import argparse
 import os
 import sys
-import argparse
-import yaml
 from pathlib import Path
 from typing import Dict, List, Optional
+
+import yaml
 
 try:
     from dotenv import load_dotenv
@@ -95,7 +96,7 @@ def translate_text(text: str, target_language: str, field_name: str, devanagari:
     language_name = SUPPORTED_LANGUAGES.get(target_language, target_language)
 
     # Build context-aware prompt
-    context = f"You are translating a verse from the Ramcharitmanas (Sundar Kanda).\n"
+    context = "You are translating a verse from the Ramcharitmanas (Sundar Kanda).\n"
     if devanagari:
         context += f"Original Devanagari: {devanagari}\n"
     context += f"Field being translated: {field_name}\n\n"
@@ -110,7 +111,7 @@ Provide ONLY the translation, no explanations or additional text."""
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": f"You are an expert translator specializing in spiritual and religious texts. Translate accurately while preserving the sacred and devotional tone."},
+                {"role": "system", "content": "You are an expert translator specializing in spiritual and religious texts. Translate accurately while preserving the sacred and devotional tone."},
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
@@ -203,7 +204,7 @@ def translate_verse(
     # Parse verse file
     frontmatter, body = parse_verse_file(verse_file)
     if frontmatter is None:
-        print(f"  ✗ Failed to parse verse file", file=sys.stderr)
+        print("  ✗ Failed to parse verse file", file=sys.stderr)
         return False
 
     devanagari = frontmatter.get('devanagari', '')
@@ -303,9 +304,9 @@ def translate_verse(
                 print(f"  ✗ {field_name} ({lang}): Failed", file=sys.stderr)
 
     # Update verse file
-    print(f"\n  → Updating verse file...")
+    print("\n  → Updating verse file...")
     if update_verse_file(verse_file, frontmatter, body):
-        print(f"  ✓ Verse file updated successfully\n")
+        print("  ✓ Verse file updated successfully\n")
         return True
     else:
         return False
@@ -416,7 +417,7 @@ Note:
     for lang in args.languages:
         if lang not in SUPPORTED_LANGUAGES and lang != 'en':
             print(f"⚠ Warning: '{lang}' is not in the supported languages list")
-            print(f"Use --list-languages to see supported languages")
+            print("Use --list-languages to see supported languages")
 
     # Check API key
     if not os.getenv("OPENAI_API_KEY"):
