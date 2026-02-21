@@ -715,15 +715,16 @@ verse-puranic-context
 
   Optional:
     --regenerate                 Overwrite existing puranic_context entries
-    --subject NAME               Filter episodes to this subject (e.g. Hanuman)
-    --subject-type TYPE          Subject type for prompt (default: deity)
     --project-dir PATH           Project directory (default: current)
+
+  subject and subject_type are read from _data/collections.yml (not CLI flags):
+    subject: Hanuman
+    subject_type: deity
 
   Examples:
     verse-puranic-context --collection hanuman-chalisa --verse chaupai-15
     verse-puranic-context --collection hanuman-chalisa --all
     verse-puranic-context --collection hanuman-chalisa --all --regenerate
-    verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
 
   See: verse-puranic-context --help
   Docs: docs/commands/verse-puranic-context.md

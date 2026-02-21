@@ -26,8 +26,6 @@ verse-puranic-context --collection COLLECTION (--verse ID | --all) [OPTIONS]
 ### Optional
 
 - `--regenerate` - Overwrite existing `puranic_context` entries (default: skip verses that already have context)
-- `--subject NAME` - Filter retrieved episodes to those involving this subject (e.g. `Hanuman`). See [Subject Filtering](#subject-filtering) below.
-- `--subject-type TYPE` - Type label for the subject used in the GPT-4o prompt (default: `deity`)
 - `--project-dir PATH` - Project directory (default: current directory)
 
 ## Examples
@@ -44,36 +42,63 @@ verse-puranic-context --collection hanuman-chalisa --verse chaupai-18 --regenera
 
 # Regenerate all verses in a collection
 verse-puranic-context --collection sundar-kaand --all --regenerate
+```
 
-# Filter context to a specific deity (reduces cross-deity noise)
-verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
+## Collection Configuration
 
-# With an explicit subject type
-verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman --subject-type deity
+Subject filtering is configured in `_data/collections.yml`, not via CLI flags. Add `subject` and `subject_type` fields to your collection entry:
+
+```yaml
+hanuman-chalisa:
+  enabled: true
+  name:
+    en: Hanuman Chalisa
+    hi: हनुमान चालीसा
+  subject: Hanuman        # primary deity/subject of this collection
+  subject_type: deity     # deity | avatar | concept | figure
+  permalink_base: /hanuman-chalisa
+  total_verses: 43
+
+sundar-kaand:
+  enabled: true
+  name:
+    en: Sundar Kaand
+    hi: सुंदर काण्ड
+  subject: Hanuman
+  subject_type: deity
+  permalink_base: /sundar-kaand
+  total_verses: 68
+```
+
+If indexed sources are available and `subject` is not set, the command will exit with an error and instructions to add it.
+
+**`subject_type`** labels the subject in the GPT-4o prompt. Use appropriate values for non-deity subjects:
+
+```yaml
+# For a philosophical text
+upanishads:
+  subject: Brahman
+  subject_type: concept
+
+# For a Rama-centric collection
+ramayana:
+  subject: Rama
+  subject_type: avatar
 ```
 
 ## Subject Filtering
 
-When indexing a broad source like Shiv Puran, RAG retrieval can surface episodes about Parvati, Shiva, or Nandi for verses that are specifically about Hanuman. Use `--subject` to keep context relevant.
+When indexing a broad source like Shiv Puran, RAG retrieval can surface episodes about Parvati, Shiva, or Nandi for verses that are specifically about Hanuman. The `subject` field in `_data/collections.yml` keeps context relevant.
 
-```bash
-verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
-```
+**What it does in three layers:**
 
-**What it does in two layers:**
+1. **Pre-filter (keyword):** After RAG retrieval, drops episodes where the subject name does not appear in the episode's keywords, id, or summary.
 
-1. **Pre-filter (keyword):** After RAG retrieval, drops episodes where the subject name does not appear in the episode's keywords, id, or summary. For example, a Parvati appearance story will be dropped for `--subject Hanuman`.
+2. **Prompt constraint (LLM):** Instructs GPT-4o to only generate `puranic_context` entries where the subject is a direct participant.
 
-2. **Prompt constraint (LLM):** Instructs GPT-4o to only generate `puranic_context` entries where the subject is a direct participant, catching cases the keyword filter misses.
+3. **Post-generation validation:** A second GPT-4o-mini call verifies that each generated entry actually involves the subject as an active participant — entries where the subject is only thematically connected are dropped.
 
-**Fallback:** If the keyword filter removes all retrieved episodes (e.g. the subject name is not explicitly mentioned in the indexed text), it falls back to the full retrieved set so generation still runs with the prompt constraint applied.
-
-**`--subject-type`** provides a label for the prompt (default: `deity`). Use other values for non-deity subjects:
-
-```bash
-verse-puranic-context --collection upanishads --all --subject Brahman --subject-type concept
-verse-puranic-context --collection ramayana --all --subject Rama --subject-type avatar
-```
+**Fallback:** If the keyword filter removes all retrieved episodes, it falls back to the full retrieved set so generation still runs with the prompt constraint applied.
 
 ## Output
 
@@ -93,7 +118,7 @@ puranic_context:
       hi: "हनुमान सीता की खोज में समुद्र लांघकर लंका पहुंचते हैं..."
     theological_significance:
       en: "Symbolises the power of devotion to overcome all obstacles..."
-      hi: "भक्ति की शक्ति से सभी बाधाओं पर विजय का प्रतीक..."
+      hi: "भक्ति की शक्ति से सभी बाधाओों पर विजय का प्रतीक..."
     practical_application:
       en: "Chanting this verse invokes Hanuman's strength in times of difficulty..."
       hi: "इस चौपाई का पाठ कठिन समय में हनुमान की शक्ति का आह्वान करता है..."
@@ -121,11 +146,15 @@ puranic_context:
 ## RAG Workflow
 
 ```bash
-# 1. Index source texts first
+# 1. Add subject to _data/collections.yml
+#    subject: Hanuman
+#    subject_type: deity
+
+# 2. Index source texts
 verse-index-sources --file data/sources/shiv-puran-part1.txt
 
-# 2. Generate context filtered to the collection's primary deity
-verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
+# 3. Generate context (subject read automatically from collections.yml)
+verse-puranic-context --collection hanuman-chalisa --all
 ```
 
 Each verse is embedded using the same provider as the indexed source (detected from `_meta.embedding_provider`) and matched against indexed episodes to select the top-8 most relevant passages as grounding context.
@@ -134,6 +163,7 @@ Each verse is embedded using the same provider as the indexed source (detected f
 
 - `OPENAI_API_KEY` environment variable
 - Verse files in `_verses/<collection>/<verse-id>.md` with YAML frontmatter
+- `subject` and `subject_type` fields in `_data/collections.yml` (required when indexed sources are present)
 - AWS credentials only if using `bedrock-cohere` indexed sources
 
 ## See Also

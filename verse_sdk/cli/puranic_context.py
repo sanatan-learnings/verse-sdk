@@ -136,6 +136,28 @@ def update_verse_file(verse_file: Path, frontmatter: Dict, body: str) -> bool:
 # RAG helpers
 # ---------------------------------------------------------------------------
 
+def load_collection_subject(collection_key: str, project_dir: Path) -> Tuple[Optional[str], str]:
+    """
+    Read subject and subject_type for a collection from _data/collections.yml.
+    Returns (subject, subject_type). subject is None if not configured.
+    """
+    collections_file = project_dir / "_data" / "collections.yml"
+    if not collections_file.exists():
+        return None, "deity"
+    try:
+        with open(collections_file, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f) or {}
+        config = data.get(collection_key, {})
+        if not isinstance(config, dict):
+            return None, "deity"
+        subject = config.get("subject") or None
+        subject_type = config.get("subject_type") or "deity"
+        return subject, subject_type
+    except Exception as e:
+        print(f"  Warning: Could not read collections.yml: {e}", file=sys.stderr)
+        return None, "deity"
+
+
 def load_puranic_references(project_dir: Path) -> Dict:
     """Load data/puranic-references.yml, return {} if not found."""
     ref_file = project_dir / "data" / "puranic-references.yml"
@@ -687,13 +709,8 @@ Examples:
   # Regenerate all verses in a collection
   verse-puranic-context --collection sundar-kaand --all --regenerate
 
-  # Filter context to a specific deity (reduces cross-deity noise)
-  verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
-
-  # With explicit subject type
-  verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman --subject-type deity
-
 Note:
+  - subject and subject_type are read from _data/collections.yml (add them there)
   - Uses RAG retrieval when indexed sources are available (data/puranic-references.yml)
   - Falls back to GPT-4 free recall with confirmation prompt if no sources indexed
   - Skips verses that already have puranic_context (use --regenerate to overwrite)
@@ -726,17 +743,6 @@ Note:
         help="Overwrite existing puranic_context entries"
     )
     parser.add_argument(
-        "--subject",
-        metavar="NAME",
-        help="Filter retrieved episodes to those involving this subject (e.g. 'Hanuman')"
-    )
-    parser.add_argument(
-        "--subject-type",
-        metavar="TYPE",
-        default="deity",
-        help="Type of subject for prompt context (default: deity)"
-    )
-    parser.add_argument(
         "--project-dir",
         type=Path,
         default=Path.cwd(),
@@ -767,8 +773,20 @@ Note:
             sys.exit(1)
         verse_files = [verse_file]
 
-    # Report indexed sources status
+    # Read subject/subject_type from collections.yml
+    subject, subject_type = load_collection_subject(args.collection, args.project_dir)
+
+    # If indexed sources are available and no subject is configured, error clearly
     sources = load_puranic_references(args.project_dir)
+    if sources and not subject:
+        print(f"✗ Error: Indexed sources are available but 'subject' is not configured for collection '{args.collection}'.")
+        print(f"  Add the following to _data/collections.yml under '{args.collection}':")
+        print(f"")
+        print(f"    subject: <primary deity or subject>   # e.g. Hanuman")
+        print(f"    subject_type: deity                   # e.g. deity, avatar, concept")
+        print(f"")
+        print(f"  This is required to filter RAG results and validate context entries.")
+        sys.exit(1)
 
     print()
     print("=" * 60)
@@ -777,8 +795,8 @@ Note:
     print(f"\nCollection : {args.collection}")
     print(f"Verses     : {'all (' + str(len(verse_files)) + ')' if args.all else args.verse}")
     print(f"Regenerate : {'yes' if args.regenerate else 'no (skip existing)'}")
-    if args.subject:
-        print(f"Subject    : {args.subject} ({args.subject_type})")
+    if subject:
+        print(f"Subject    : {subject} ({subject_type})")
     if sources:
         print(f"RAG sources: {len(sources)} indexed ({', '.join(sources.keys())})")
     else:
@@ -793,8 +811,8 @@ Note:
                 verse_file,
                 regenerate=args.regenerate,
                 project_dir=args.project_dir,
-                subject=args.subject,
-                subject_type=args.subject_type,
+                subject=subject,
+                subject_type=subject_type,
             )
             counts[result] = counts.get(result, 0) + 1
     except KeyboardInterrupt:
