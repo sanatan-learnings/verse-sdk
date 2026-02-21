@@ -818,7 +818,7 @@ def create_verse_file_with_content(verse_file: Path, content: dict, collection: 
             'verse_number': verse_num,
             'verse_type': verse_type,
             'previous_verse': f'/{collection}/{prev_id}/' if prev_id else None,
-            'next_verse': f'/{collection}/{next_id}/' if next_id else None,
+            'next_verse': f'/{collection}/{next_id}/' if next_id else get_collection_permalink(collection, project_dir),
             'image': f'/images/{collection}/modern-minimalist/{verse_id}.png',
             'devanagari': content['devanagari'],
             'transliteration': content['transliteration'],
@@ -994,7 +994,7 @@ def update_verse_file_with_content(verse_file: Path, content: dict) -> bool:
             'verse_number': verse_num,
             'verse_type': verse_type,
             'previous_verse': f'/{collection}/{prev_id}/' if prev_id else None,
-            'next_verse': f'/{collection}/{next_id}/' if next_id else None,
+            'next_verse': f'/{collection}/{next_id}/' if next_id else get_collection_permalink(collection, project_dir),
             'image': frontmatter.get('image', f'/images/{collection}/modern-minimalist/{verse_id}.png'),
             'devanagari': content['devanagari'],
             'transliteration': content['transliteration'],
@@ -1213,6 +1213,24 @@ def extract_verse_number_from_id(verse_id: str) -> Optional[int]:
     if match:
         return int(match.group(1))
     return None
+
+
+def get_collection_permalink(collection: str, project_dir: Path = Path.cwd()) -> str:
+    """
+    Return the collection index URL for use as next_verse on the last verse.
+    Reads permalink_base from _data/collections.yml, defaults to /{collection}/.
+    """
+    collections_file = project_dir / "_data" / "collections.yml"
+    if collections_file.exists():
+        try:
+            with open(collections_file) as f:
+                data = yaml.safe_load(f) or {}
+            base = data.get(collection, {}).get("permalink_base")
+            if base:
+                return base if base.endswith("/") else base + "/"
+        except Exception:
+            pass
+    return f"/{collection}/"
 
 
 def get_navigation_from_sequence(collection: str, verse_id: str, project_dir: Path = Path.cwd()) -> tuple[Optional[str], Optional[str]]:
