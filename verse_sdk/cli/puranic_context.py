@@ -241,6 +241,28 @@ def search_episodes(
     return [ep for _, ep in scored[:top_k]]
 
 
+def filter_episodes_by_subject(episodes: List[Dict], subject: str) -> List[Dict]:
+    """
+    Filter retrieved episodes to those where the subject appears as a participant.
+    Checks episode id, keywords, and summary_en (case-insensitive).
+    Returns the filtered list; if nothing matches, returns the original list
+    so the generation prompt can still apply the constraint.
+    """
+    tokens = [t.lower() for t in subject.split()]
+
+    def matches(ep: Dict) -> bool:
+        haystack = " ".join([
+            ep.get("id", ""),
+            " ".join(ep.get("keywords", [])),
+            ep.get("summary_en", ""),
+            ep.get("summary_hi", ""),
+        ]).lower()
+        return any(token in haystack for token in tokens)
+
+    filtered = [ep for ep in episodes if matches(ep)]
+    return filtered if filtered else episodes
+
+
 def embed_verse_for_search(
     frontmatter: Dict, verse_id: str, project_dir: Path, provider: str = "openai"
 ) -> Optional[List[float]]:
@@ -351,6 +373,8 @@ def generate_puranic_context(
     verse_id: str,
     retrieved_episodes: Optional[List[Dict]] = None,
     indexed_source_names: Optional[List[str]] = None,
+    subject: Optional[str] = None,
+    subject_type: Optional[str] = None,
 ) -> Optional[List]:
     """Call GPT-4o to generate puranic_context entries. Returns a list or None on error."""
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -363,6 +387,9 @@ def generate_puranic_context(
     if indexed_source_names:
         names = ", ".join(indexed_source_names)
         system += f"\n\nIMPORTANT: The source_texts field must only cite the following indexed sources: {names}. Do not cite any other texts."
+    if subject:
+        label = f"{subject_type} {subject}" if subject_type else subject
+        system += f"\n\nIMPORTANT: Only include context entries that directly involve {label} as a primary or secondary participant, or that are theologically necessary to understand this verse about {label}. Omit entries about other deities or figures unless they directly interact with {label} in the episode."
 
     try:
         response = client.chat.completions.create(
@@ -402,7 +429,11 @@ def generate_puranic_context(
 # ---------------------------------------------------------------------------
 
 def process_verse(
-    verse_file: Path, regenerate: bool = False, project_dir: Optional[Path] = None
+    verse_file: Path,
+    regenerate: bool = False,
+    project_dir: Optional[Path] = None,
+    subject: Optional[str] = None,
+    subject_type: Optional[str] = None,
 ) -> str:
     """
     Process a single verse file.
@@ -452,7 +483,13 @@ def process_verse(
 
             if all_episodes and all_embeddings:
                 retrieved_episodes = search_episodes(query_embedding, all_episodes, all_embeddings)
-                print(f"  → {verse_id}: Retrieved {len(retrieved_episodes)} relevant episode(s)")
+                if subject and retrieved_episodes:
+                    filtered = filter_episodes_by_subject(retrieved_episodes, subject)
+                    if len(filtered) < len(retrieved_episodes):
+                        print(f"  → {verse_id}: Filtered to {len(filtered)}/{len(retrieved_episodes)} episodes matching subject '{subject}'")
+                    retrieved_episodes = filtered
+                else:
+                    print(f"  → {verse_id}: Retrieved {len(retrieved_episodes)} relevant episode(s)")
             else:
                 print(f"  ⚠ {verse_id}: Sources registered but no indexed episodes found")
         else:
@@ -472,6 +509,8 @@ def process_verse(
         frontmatter, verse_id,
         retrieved_episodes=retrieved_episodes,
         indexed_source_names=indexed_source_names,
+        subject=subject,
+        subject_type=subject_type,
     )
 
     if entries is None:
@@ -513,6 +552,12 @@ Examples:
   # Regenerate all verses in a collection
   verse-puranic-context --collection sundar-kaand --all --regenerate
 
+  # Filter context to a specific deity (reduces cross-deity noise)
+  verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman
+
+  # With explicit subject type
+  verse-puranic-context --collection hanuman-chalisa --all --subject Hanuman --subject-type deity
+
 Note:
   - Uses RAG retrieval when indexed sources are available (data/puranic-references.yml)
   - Falls back to GPT-4 free recall with confirmation prompt if no sources indexed
@@ -544,6 +589,17 @@ Note:
         "--regenerate",
         action="store_true",
         help="Overwrite existing puranic_context entries"
+    )
+    parser.add_argument(
+        "--subject",
+        metavar="NAME",
+        help="Filter retrieved episodes to those involving this subject (e.g. 'Hanuman')"
+    )
+    parser.add_argument(
+        "--subject-type",
+        metavar="TYPE",
+        default="deity",
+        help="Type of subject for prompt context (default: deity)"
     )
     parser.add_argument(
         "--project-dir",
@@ -586,6 +642,8 @@ Note:
     print(f"\nCollection : {args.collection}")
     print(f"Verses     : {'all (' + str(len(verse_files)) + ')' if args.all else args.verse}")
     print(f"Regenerate : {'yes' if args.regenerate else 'no (skip existing)'}")
+    if args.subject:
+        print(f"Subject    : {args.subject} ({args.subject_type})")
     if sources:
         print(f"RAG sources: {len(sources)} indexed ({', '.join(sources.keys())})")
     else:
@@ -596,7 +654,13 @@ Note:
 
     try:
         for verse_file in verse_files:
-            result = process_verse(verse_file, regenerate=args.regenerate, project_dir=args.project_dir)
+            result = process_verse(
+                verse_file,
+                regenerate=args.regenerate,
+                project_dir=args.project_dir,
+                subject=args.subject,
+                subject_type=args.subject_type,
+            )
             counts[result] = counts.get(result, 0) + 1
     except KeyboardInterrupt:
         print("\n\n⚠ Interrupted by user")
