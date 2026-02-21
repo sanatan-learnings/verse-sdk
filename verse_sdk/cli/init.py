@@ -52,7 +52,6 @@ COLLECTIONS_YML_CONTENT = """# Collection registry
 GITIGNORE_CONTENT = """# Generated content
 images/
 audio/
-data/embeddings.json
 
 # Environment
 .env
