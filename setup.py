@@ -35,6 +35,7 @@ setup(
         "sentence-transformers>=2.2.0",
         "torch>=2.0.0",
         "beautifulsoup4>=4.12.0",
+        "boto3>=1.34.0",
     ],
     entry_points={
         'console_scripts': [

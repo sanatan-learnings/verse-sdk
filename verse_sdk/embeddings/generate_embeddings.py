@@ -37,13 +37,22 @@ PROVIDERS = {
         'model': 'text-embedding-3-small',
         'dimensions': 1536,
         'cost_per_1m': 0.02,
-        'requires_api_key': True
+        'requires_api_key': True,
+        'backend': 'openai'
+    },
+    'bedrock-cohere': {
+        'model': 'cohere.embed-multilingual-v3',
+        'dimensions': 1024,
+        'cost_per_1m': 0.10,
+        'requires_api_key': False,
+        'backend': 'bedrock'
     },
     'huggingface': {
         'model': 'sentence-transformers/all-MiniLM-L6-v2',
         'dimensions': 384,
         'cost_per_1m': 0.0,  # Free (local)
-        'requires_api_key': False
+        'requires_api_key': False,
+        'backend': 'local'
     }
 }
 
@@ -72,6 +81,26 @@ def get_huggingface_embedding(text, model_instance):
         return None
 
 
+def get_bedrock_embedding(text, client, config):
+    """Get embedding from Amazon Bedrock Cohere multilingual model."""
+    import json
+    try:
+        response = client.invoke_model(
+            modelId=config['model'],
+            body=json.dumps({
+                "texts": [text],
+                "input_type": "search_document"
+            }),
+            contentType='application/json',
+            accept='application/json'
+        )
+        response_body = json.loads(response['body'].read())
+        return response_body['embeddings'][0]
+    except Exception as e:
+        print(f"  Error: {e}")
+        return None
+
+
 def initialize_provider(provider_name):
     """
     Initialize the embedding provider.
@@ -93,6 +122,29 @@ def initialize_provider(provider_name):
         print(f"✓ OpenAI client initialized (key: {api_key[:8]}...)")
 
         return get_openai_embedding, client, config
+
+    elif provider_name == 'bedrock-cohere':
+        try:
+            import boto3
+        except ImportError:
+            print("Error: boto3 not installed")
+            print("Run: pip install boto3")
+            sys.exit(1)
+
+        region = os.getenv('AWS_REGION', 'us-east-1')
+        try:
+            client = boto3.client(
+                service_name='bedrock-runtime',
+                region_name=region
+            )
+            print(f"✓ Bedrock client initialized (region: {region})")
+            print(f"✓ Model: {config['model']}")
+        except Exception as e:
+            print(f"Error initializing Bedrock client: {e}")
+            print("Configure AWS credentials: aws configure")
+            sys.exit(1)
+
+        return get_bedrock_embedding, client, config
 
     elif provider_name == 'huggingface':
         try:
@@ -263,24 +315,28 @@ def process_verse_file(file_path, embed_func, client_or_model, config, collectio
     doc_hi = build_document(verse_data, 'hi')
 
     # Get embeddings
+    backend = config.get('backend', 'openai')
+
     print(f"  Getting English embedding...")
-    if config['requires_api_key']:
+    if backend == 'bedrock':
+        emb_en = embed_func(doc_en, client_or_model, config)
+    elif backend == 'openai':
         emb_en = embed_func(doc_en, client_or_model, config['model'])
     else:
         emb_en = embed_func(doc_en, client_or_model)
 
-    # Small delay for API rate limiting (only if using API)
-    if config['requires_api_key']:
+    if backend in ('openai', 'bedrock'):
         time.sleep(0.1)
 
     print(f"  Getting Hindi embedding...")
-    if config['requires_api_key']:
+    if backend == 'bedrock':
+        emb_hi = embed_func(doc_hi, client_or_model, config)
+    elif backend == 'openai':
         emb_hi = embed_func(doc_hi, client_or_model, config['model'])
     else:
         emb_hi = embed_func(doc_hi, client_or_model)
 
-    # Small delay for API rate limiting (only if using API)
-    if config['requires_api_key']:
+    if backend in ('openai', 'bedrock'):
         time.sleep(0.1)
 
     if not emb_en or not emb_hi:
@@ -440,7 +496,7 @@ Examples:
     )
     parser.add_argument(
         '--provider',
-        choices=['openai', 'huggingface'],
+        choices=['openai', 'bedrock-cohere', 'huggingface'],
         default=os.getenv('EMBEDDING_PROVIDER', 'openai'),
         help='Embedding provider to use (default: from EMBEDDING_PROVIDER env var or "openai")'
     )
