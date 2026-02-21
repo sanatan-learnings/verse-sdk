@@ -167,6 +167,26 @@ def load_episode_embeddings(key: str, project_dir: Path) -> List[Dict]:
         return []
 
 
+def load_embeddings_model(key: str, project_dir: Path) -> Optional[str]:
+    """Read the model name stored in data/embeddings/<key>.json metadata."""
+    emb_file = project_dir / "data" / "embeddings" / f"{key}.json"
+    if not emb_file.exists():
+        return None
+    try:
+        with open(emb_file, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data.get("model")
+    except Exception:
+        return None
+
+
+def provider_from_model(model: str) -> str:
+    """Map a model name to its provider key for initialize_provider."""
+    if model and model.startswith("cohere."):
+        return "bedrock-cohere"
+    return "openai"
+
+
 def cosine_similarity(a: List[float], b: List[float]) -> float:
     """Dot product of two L2-normalised vectors (Cohere embeddings are normalised)."""
     try:
@@ -202,9 +222,11 @@ def search_episodes(
     return [ep for _, ep in scored[:top_k]]
 
 
-def embed_verse_for_search(frontmatter: Dict, verse_id: str, project_dir: Path) -> Optional[List[float]]:
+def embed_verse_for_search(
+    frontmatter: Dict, verse_id: str, project_dir: Path, provider: str = "openai"
+) -> Optional[List[float]]:
     """
-    Embed the verse using Bedrock Cohere with input_type='search_query'.
+    Embed the verse for RAG search using the same provider as the stored embeddings.
     Returns the embedding vector or None on failure.
     """
     try:
@@ -231,7 +253,7 @@ def embed_verse_for_search(frontmatter: Dict, verse_id: str, project_dir: Path) 
     text = " ".join(parts)
 
     try:
-        embed_fn, client, config = initialize_provider("bedrock-cohere")
+        embed_fn, client, config = initialize_provider(provider)
         backend = config.get("backend", "openai")
         if backend == "bedrock":
             return get_bedrock_embedding(text, client, config, input_type="search_query")
@@ -381,8 +403,16 @@ def process_verse(
     sources = load_puranic_references(project_dir)
 
     if sources:
-        print(f"  → {verse_id}: Embedding verse for RAG search ({len(sources)} source(s))...")
-        query_embedding = embed_verse_for_search(frontmatter, verse_id, project_dir)
+        # Detect provider from stored embeddings metadata (use first source found)
+        provider = "openai"
+        for key in sources:
+            model = load_embeddings_model(key, project_dir)
+            if model:
+                provider = provider_from_model(model)
+                break
+
+        print(f"  → {verse_id}: Embedding verse for RAG search ({len(sources)} source(s), provider: {provider})...")
+        query_embedding = embed_verse_for_search(frontmatter, verse_id, project_dir, provider=provider)
 
         if query_embedding:
             all_episodes: List[Dict] = []
