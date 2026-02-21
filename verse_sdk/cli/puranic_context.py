@@ -140,14 +140,33 @@ def load_puranic_references(project_dir: Path) -> Dict:
         return {}
 
 
+def load_index_meta(key: str, project_dir: Path) -> Optional[Dict]:
+    """Load _meta from data/puranic-index/<key>.yml, return None if not found."""
+    index_file = project_dir / "data" / "puranic-index" / f"{key}.yml"
+    if not index_file.exists():
+        return None
+    try:
+        with open(index_file, "r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if isinstance(data, dict):
+            return data.get("_meta")
+        return None
+    except Exception:
+        return None
+
+
 def load_episode_index(key: str, project_dir: Path) -> List[Dict]:
-    """Load data/puranic-index/<key>.yml, return [] if not found."""
+    """Load episodes from data/puranic-index/<key>.yml, return [] if not found.
+    Handles both new format ({_meta, episodes}) and legacy bare-list format."""
     index_file = project_dir / "data" / "puranic-index" / f"{key}.yml"
     if not index_file.exists():
         return []
     try:
         with open(index_file, "r", encoding="utf-8") as f:
-            return yaml.safe_load(f) or []
+            data = yaml.safe_load(f)
+        if isinstance(data, dict):
+            return data.get("episodes") or []
+        return data or []  # legacy: bare list
     except Exception as e:
         print(f"  Warning: Could not load episode index for '{key}': {e}", file=sys.stderr)
         return []
@@ -409,9 +428,13 @@ def process_verse(
     sources = load_puranic_references(project_dir)
 
     if sources:
-        # Detect provider from stored embeddings metadata (use first source found)
+        # Detect provider from _meta in index file (authoritative), fall back to embeddings JSON
         provider = "openai"
         for key in sources:
+            meta = load_index_meta(key, project_dir)
+            if meta and meta.get("embedding_provider"):
+                provider = meta["embedding_provider"]
+                break
             model = load_embeddings_model(key, project_dir)
             if model:
                 provider = provider_from_model(model)

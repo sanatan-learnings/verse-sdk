@@ -24,6 +24,12 @@ from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
 try:
+    from importlib.metadata import version as _pkg_version
+    SDK_VERSION = _pkg_version("sanatan-verse-sdk")
+except Exception:
+    SDK_VERSION = "unknown"
+
+try:
     from dotenv import load_dotenv
 except ImportError:
     print("Error: python-dotenv package not installed")
@@ -385,8 +391,22 @@ Note:
     index_dir.mkdir(parents=True, exist_ok=True)
     index_file = index_dir / f"{key}.yml"
 
+    source_name = key.replace("-", " ").title()
+    meta = {
+        "source_file": source_file.name,
+        "source_name": source_name,
+        "legend": f"📜 {source_name}",
+        "generated_at": datetime.now().isoformat(),
+        "sdk_version": SDK_VERSION,
+        "embedding_provider": args.provider,
+        "embedding_model": config["model"],
+        "chunk_size": args.chunk_size,
+        "episode_count": len(episodes),
+    }
+    index_output = {"_meta": meta, "episodes": episodes}
+
     with open(index_file, "w", encoding="utf-8") as f:
-        yaml.dump(episodes, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
+        yaml.dump(index_output, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
     print(f"Wrote episode index: {index_file}")
 
     # Step 8: Write embeddings/<key>.json
