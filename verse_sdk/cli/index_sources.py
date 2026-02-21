@@ -249,6 +249,59 @@ def is_already_indexed(key: str, project_dir: Path) -> bool:
     return index_file.exists()
 
 
+def patch_meta(key: str, source_file: Path, project_dir: Path, provider: str, chunk_size: int) -> None:
+    """
+    Patch _meta onto an existing puranic-index/<key>.yml without re-indexing.
+    Reads embedding model from data/embeddings/<key>.json if available.
+    """
+    index_file = project_dir / "data" / "puranic-index" / f"{key}.yml"
+    if not index_file.exists():
+        print(f"Error: Index file not found: {index_file}")
+        sys.exit(1)
+
+    with open(index_file, "r", encoding="utf-8") as f:
+        data = yaml.safe_load(f)
+
+    # Handle both legacy (bare list) and current ({_meta, episodes}) formats
+    if isinstance(data, list):
+        episodes = data
+    else:
+        episodes = data.get("episodes", [])
+
+    # Read model from embeddings JSON if available
+    emb_file = project_dir / "data" / "embeddings" / f"{key}.json"
+    embedding_model = provider  # fallback
+    if emb_file.exists():
+        try:
+            with open(emb_file, "r", encoding="utf-8") as f:
+                emb_data = json.load(f)
+            embedding_model = emb_data.get("model", embedding_model)
+        except Exception:
+            pass
+
+    source_name = key.replace("-", " ").title()
+    meta = {
+        "source_file": source_file.name,
+        "source_name": source_name,
+        "legend": f"📜 {source_name}",
+        "generated_at": datetime.now().isoformat(),
+        "sdk_version": SDK_VERSION,
+        "embedding_provider": provider,
+        "embedding_model": embedding_model,
+        "chunk_size": chunk_size,
+        "episode_count": len(episodes),
+    }
+
+    with open(index_file, "w", encoding="utf-8") as f:
+        yaml.dump({"_meta": meta, "episodes": episodes}, f,
+                  allow_unicode=True, sort_keys=False, default_flow_style=False)
+
+    print(f"Updated _meta in {index_file}")
+    print(f"  Episodes      : {len(episodes)}")
+    print(f"  Provider      : {provider}")
+    print(f"  Embedding model: {embedding_model}")
+
+
 def main():
     """Main entry point for verse-index-sources command."""
     parser = argparse.ArgumentParser(
@@ -268,6 +321,9 @@ Examples:
   # Use a larger chunk size for dense prose (default: 4000)
   verse-index-sources --file data/sources/shiv-puran.txt --chunk-size 6000
 
+  # Patch _meta onto an existing index (no re-indexing, fast)
+  verse-index-sources --file data/sources/shiv-puran.txt --update-meta
+
 Note:
   - Outputs are written to data/puranic-index/<key>.yml and data/embeddings/<key>.json
   - Requires OPENAI_API_KEY and (for bedrock-cohere) AWS credentials
@@ -285,6 +341,11 @@ Note:
         "--force",
         action="store_true",
         help="Re-index even if this source has already been indexed",
+    )
+    parser.add_argument(
+        "--update-meta",
+        action="store_true",
+        help="Patch _meta onto an existing index without re-indexing (fast)",
     )
     parser.add_argument(
         "--project-dir",
@@ -335,6 +396,11 @@ Note:
     print(f"Provider   : {args.provider}")
     print(f"Project dir: {args.project_dir}")
     print()
+
+    # --update-meta: patch _meta without re-indexing
+    if args.update_meta:
+        patch_meta(key, source_file, args.project_dir, args.provider, args.chunk_size)
+        sys.exit(0)
 
     # Guard: already indexed?
     if is_already_indexed(key, args.project_dir) and not args.force:
