@@ -210,7 +210,58 @@ class ProjectValidator:
         else:
             results['warnings'].append(f"⚠️  data/scenes/{collection_key}.yml not found - needed for image generation")
 
+        # Check that generated assets are wired up in the layout template
+        self._check_template_wiring(collection_key, results)
+
         return results
+
+    def _check_template_wiring(self, collection_key: str, results: Dict) -> None:
+        """
+        Warn if generated assets (audio, images) exist for a collection but the
+        collection name does not appear in _layouts/verse.html.
+
+        Skips silently when the layout file doesn't exist (non-Jekyll projects).
+        """
+        layout_file = self.project_dir / "_layouts" / "verse.html"
+        if not layout_file.exists():
+            return
+
+        try:
+            layout_content = layout_file.read_text(encoding='utf-8')
+        except Exception:
+            return
+
+        collection_in_layout = collection_key in layout_content
+
+        # Audio check
+        audio_dir = self.project_dir / "audio" / collection_key
+        if audio_dir.exists() and audio_dir.is_dir():
+            audio_files = list(audio_dir.glob("*.mp3")) + list(audio_dir.glob("*.wav"))
+            if audio_files:
+                if collection_in_layout:
+                    results['successes'].append(
+                        f"✅ audio/{collection_key}/ ({len(audio_files)} file(s)) — collection wired in _layouts/verse.html"
+                    )
+                else:
+                    results['warnings'].append(
+                        f"⚠️  {len(audio_files)} audio file(s) in audio/{collection_key}/ but '{collection_key}' "
+                        f"not found in _layouts/verse.html — audio player may not render for this collection"
+                    )
+
+        # Image check
+        images_dir = self.project_dir / "images" / collection_key
+        if images_dir.exists() and images_dir.is_dir():
+            image_files = list(images_dir.rglob("*.png")) + list(images_dir.rglob("*.jpg"))
+            if image_files:
+                if collection_in_layout:
+                    results['successes'].append(
+                        f"✅ images/{collection_key}/ ({len(image_files)} file(s)) — collection wired in _layouts/verse.html"
+                    )
+                else:
+                    results['warnings'].append(
+                        f"⚠️  {len(image_files)} image(s) in images/{collection_key}/ but '{collection_key}' "
+                        f"not found in _layouts/verse.html — images may not render for this collection"
+                    )
 
     def validate_all_collections(self) -> List[Dict]:
         """
