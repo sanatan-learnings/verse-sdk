@@ -83,7 +83,15 @@ Rules:
   content, return an empty list []
 - Prioritise accuracy over quantity
 - All Hindi text must be in Devanagari script
-- Return ONLY valid YAML — no markdown fences, no explanation"""
+- Return ONLY valid YAML — no markdown fences, no explanation
+- CITATION RULES (strictly enforced):
+  * Every entry MUST have a genuine section reference (e.g. "Rudrasamhita, Chapter 12")
+    sourced from the retrieved episode metadata provided below
+  * Do NOT set section to "Not directly mentioned", "Unknown", "Various", or any
+    vague placeholder — omit the entire entry instead
+  * Do NOT cite scriptures that were not provided in the retrieved episodes
+    (e.g. do not cite Ramayana or Mahabharata unless those episodes were retrieved)
+  * If no retrieved episode provides a direct, citable reference for an entry, return []"""
 
 
 # ---------------------------------------------------------------------------
@@ -368,6 +376,36 @@ Return [] if the verse has no meaningful Puranic content."""
     return prompt
 
 
+_VAGUE_SECTIONS = {
+    "not directly mentioned", "not mentioned", "unknown", "various",
+    "n/a", "na", "none", "unclear", "unspecified", "not specified",
+    "not available", "not applicable",
+}
+
+
+def _reject_uncited_entries(entries: List[Dict]) -> List[Dict]:
+    """
+    Drop any context entry where every source_texts item has a missing or
+    vague section — these are hallucinated references.
+    """
+    kept = []
+    for entry in entries:
+        source_texts = entry.get("source_texts") or []
+        valid = [
+            s for s in source_texts
+            if isinstance(s, dict)
+            and str(s.get("section", "")).strip().lower() not in _VAGUE_SECTIONS
+            and str(s.get("section", "")).strip() != ""
+        ]
+        if valid:
+            entry["source_texts"] = valid
+            kept.append(entry)
+        else:
+            ep_id = entry.get("id", "?")
+            print(f"    ⚠ Dropped entry '{ep_id}': no citable section reference", file=sys.stderr)
+    return kept
+
+
 def generate_puranic_context(
     frontmatter: Dict,
     verse_id: str,
@@ -414,7 +452,7 @@ def generate_puranic_context(
         if not isinstance(parsed, list):
             print(f"  ⚠ Unexpected response format (not a list)", file=sys.stderr)
             return None
-        return parsed
+        return _reject_uncited_entries(parsed)
 
     except yaml.YAMLError as e:
         print(f"  ✗ YAML parse error in AI response: {e}", file=sys.stderr)
