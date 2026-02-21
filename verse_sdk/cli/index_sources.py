@@ -37,7 +37,7 @@ except ImportError:
 
 load_dotenv()
 
-CHUNK_SIZE = 1500  # characters per chunk
+CHUNK_SIZE = 4000  # characters per chunk
 
 EPISODE_SYSTEM_PROMPT = """You are an expert in Hindu scriptures and Puranic literature.
 Given a passage from a source text, extract structured episodes as a YAML list.
@@ -256,8 +256,11 @@ Examples:
   # Index a text file, force re-index
   verse-index-sources --file data/sources/devi-bhagavata.txt --force
 
-  # Use a specific embedding provider
+  # Use Bedrock Cohere for multilingual (Sanskrit/Hindi) content
   verse-index-sources --file data/sources/notes.md --provider bedrock-cohere
+
+  # Use a larger chunk size for dense prose (default: 4000)
+  verse-index-sources --file data/sources/shiv-puran.txt --chunk-size 6000
 
 Note:
   - Outputs are written to data/puranic-index/<key>.yml and data/embeddings/<key>.json
@@ -286,8 +289,15 @@ Note:
     parser.add_argument(
         "--provider",
         choices=["bedrock-cohere", "openai"],
-        default="bedrock-cohere",
-        help="Embedding provider (default: bedrock-cohere)",
+        default="openai",
+        help="Embedding provider (default: openai)",
+    )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=CHUNK_SIZE,
+        metavar="CHARS",
+        help=f"Characters per text chunk (default: {CHUNK_SIZE})",
     )
 
     args = parser.parse_args()
@@ -315,6 +325,7 @@ Note:
     print(f"\nSource     : {source_file.name}")
     print(f"Key        : {key}")
     print(f"Format     : {source_file.suffix.lstrip('.')}")
+    print(f"Chunk size : {args.chunk_size} chars")
     print(f"Provider   : {args.provider}")
     print(f"Project dir: {args.project_dir}")
     print()
@@ -331,8 +342,8 @@ Note:
     print(f"  Extracted {len(text):,} characters")
 
     # Step 2: Chunk
-    chunks = chunk_text(text)
-    print(f"  Split into {len(chunks)} chunks (~{CHUNK_SIZE} chars each)")
+    chunks = chunk_text(text, chunk_size=args.chunk_size)
+    print(f"  Split into {len(chunks)} chunks (~{args.chunk_size} chars each)")
     print()
 
     # Step 3: Extract episodes via GPT-4o

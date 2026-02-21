@@ -31,7 +31,8 @@ verse-index-sources --file PATH [OPTIONS]
 ### Optional
 
 - `--force` - Re-index even if this source has already been indexed
-- `--provider {bedrock-cohere,openai}` - Embedding provider (default: `bedrock-cohere`)
+- `--chunk-size CHARS` - Characters per text chunk (default: `4000`). Increase for dense prose like Puranic texts; decrease for short-form content.
+- `--provider {bedrock-cohere,openai}` - Embedding provider (default: `openai`). Use `bedrock-cohere` for better multilingual (Sanskrit/Hindi) accuracy.
 - `--project-dir PATH` - Project directory (default: current directory)
 
 ## Examples
@@ -43,8 +44,11 @@ verse-index-sources --file data/sources/valmiki-ramayana.pdf
 # Index a text file, force re-index
 verse-index-sources --file data/sources/devi-bhagavata.txt --force
 
-# Use OpenAI embeddings instead of Bedrock Cohere
-verse-index-sources --file data/sources/notes.md --provider openai
+# Use a larger chunk size for dense Puranic prose (default: 4000)
+verse-index-sources --file data/sources/shiv-puran.txt --chunk-size 6000
+
+# Use Bedrock Cohere for better multilingual (Sanskrit/Hindi) accuracy
+verse-index-sources --file data/sources/shiv-puran.txt --provider bedrock-cohere
 ```
 
 ## Output Files
