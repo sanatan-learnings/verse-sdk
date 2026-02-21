@@ -46,23 +46,20 @@ jobs:
         run: |
           VERSION="v${{ inputs.version }}"
           PREV=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -1)
-
           if [ -n "$PREV" ]; then
             COMMITS=$(git log "${PREV}..${VERSION}" --format="- %s" --no-merges | grep -v "^- Bump version")
           else
             COMMITS=$(git log "${VERSION}" --format="- %s" --no-merges | grep -v "^- Bump version")
           fi
-
-          NOTES="## Changes
-
-${COMMITS}
-
-## Install
-\`\`\`
-pip install sanatan-verse-sdk==${{ inputs.version }}
-\`\`\`"
-
+          echo "## Changes" > /tmp/release-notes.md
+          echo "" >> /tmp/release-notes.md
+          echo "${COMMITS}" >> /tmp/release-notes.md
+          echo "" >> /tmp/release-notes.md
+          echo "## Install" >> /tmp/release-notes.md
+          echo '```' >> /tmp/release-notes.md
+          echo "pip install sanatan-verse-sdk==${{ inputs.version }}" >> /tmp/release-notes.md
+          echo '```' >> /tmp/release-notes.md
           gh release create "${VERSION}" \
             --title "${VERSION}" \
-            --notes "${NOTES}" \
+            --notes-file /tmp/release-notes.md \
             --latest
